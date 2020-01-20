@@ -81,114 +81,127 @@ class SubnetDNSCompatibilityIntegratorTestCase(testlib_api.SqlTestCase):
         self.core_plugin.create_port.assert_not_called()
 
     def test_subnet_before_delete_callback(self):
-        payload = self._get_payload('sub-1', 'test-subnet')
-        kwargs = self._get_callback_params(
-            resources.SUBNET, payload, events.BEFORE_DELETE)
-
         ports = [{'id': 'port-1', 'name': 'test-port'}]
         self._mock_core_plugin_get_port(ports=ports)
 
-        self.dns_integrator.before_delete_subnet(**kwargs)
+        resource = resources.SUBNET
+        event = events.BEFORE_DELETE
+        trigger = mock.Mock()
+        resource_id = 'sub-1'
+        context = mock.Mock()
+        self.dns_integrator.before_delete_subnet(resource, event, trigger,
+                                                 resource_id, context)
 
         expected_filter = {
-            'device_id': [payload.resource_id],
+            'device_id': [resource_id],
             'device_owner': [subnet_dns_integrator.TF_DNS_DEVICE_OWNER]}
         expected_calls = [
-            mock.call.get_ports(payload.context, filters=expected_filter),
-            mock.call.delete_port(payload.context, ports[0]['id'])]
+            mock.call.get_ports(context, filters=expected_filter),
+            mock.call.delete_port(context, ports[0]['id'])]
         self.core_plugin.assert_has_calls(expected_calls)
 
     def test_subnet_before_delete_callback_no_port(self):
-        payload = self._get_payload('sub-1', 'test-subnet')
-        kwargs = self._get_callback_params(
-            resources.SUBNET, payload, events.BEFORE_DELETE)
-
         self._mock_core_plugin_get_port(ports=[])
 
-        self.dns_integrator.before_delete_subnet(**kwargs)
+        resource = resources.SUBNET
+        event = events.BEFORE_DELETE
+        trigger = mock.Mock()
+        resource_id = 'sub-1'
+        context = mock.Mock()
+        self.dns_integrator.before_delete_subnet(resource, event, trigger,
+                                                 resource_id, context)
 
         expected_filter = {
-            'device_id': [payload.resource_id],
+            'device_id': [resource_id],
             'device_owner': [subnet_dns_integrator.TF_DNS_DEVICE_OWNER]}
         expected_calls = [
-            mock.call.get_ports(payload.context, filters=expected_filter)]
+            mock.call.get_ports(context, filters=expected_filter)]
         self.core_plugin.assert_has_calls(expected_calls)
         self.core_plugin.delete_port.assert_not_called()
 
     def test_subnet_abort_delete_callback(self):
         subnet = self._get_subnet_data()
-        payload = self._get_payload(subnet['id'], subnet['name'])
-        kwargs = self._get_callback_params(
-            resources.SUBNET, payload, events.ABORT_DELETE)
 
         self._mock_tf_driver_get_subnet(subnet_data=subnet)
         self.dns_integrator.add_dns_port_for_subnet = mock.Mock()
 
-        self.dns_integrator.abort_delete_subnet(**kwargs)
+        resource = resources.SUBNET
+        event = events.ABORT_DELETE
+        trigger = mock.Mock()
+        resource_id = subnet['id']
+        context = mock.Mock()
+        self.dns_integrator.abort_delete_subnet(resource, event, trigger,
+                                                resource_id, context)
 
         self.dns_integrator.add_dns_port_for_subnet.assert_called_with(
-            payload.context, subnet)
+            context, subnet)
 
     def test_network_before_delete_callback(self):
-        payload = self._get_payload('net-1', 'test-network')
-        kwargs = self._get_callback_params(
-            resources.NETWORK, payload, events.BEFORE_DELETE)
-
         ports = [{'id': 'port-1', 'name': 'test-port'},
                  {'id': 'port-2', 'name': 'test-port2'}]
         self._mock_core_plugin_get_port(ports=ports)
 
-        self.dns_integrator.before_delete_network(**kwargs)
+        resource = resources.SUBNET
+        event = events.BEFORE_DELETE
+        trigger = mock.Mock()
+        resource_id = 'net-1'
+        context = mock.Mock()
+        self.dns_integrator.before_delete_network(resource, event, trigger,
+                                                  resource_id, context)
 
         expected_filter = {
-            'network_id': [payload.resource_id],
+            'network_id': [resource_id],
             'device_owner': [subnet_dns_integrator.TF_DNS_DEVICE_OWNER]}
         expected_calls = [
-            mock.call.get_ports(payload.context, filters=expected_filter),
-            mock.call.delete_port(payload.context, ports[0]['id']),
-            mock.call.delete_port(payload.context, ports[1]['id'])]
+            mock.call.get_ports(context, filters=expected_filter),
+            mock.call.delete_port(context, ports[0]['id']),
+            mock.call.delete_port(context, ports[1]['id'])]
         self.core_plugin.assert_has_calls(expected_calls)
 
     def test_network_before_delete_callback_no_port(self):
-        payload = self._get_payload('net-1', 'test-network')
-        kwargs = self._get_callback_params(
-            resources.NETWORK, payload, events.BEFORE_DELETE)
-
         self._mock_core_plugin_get_port(ports=[])
 
-        self.dns_integrator.before_delete_network(**kwargs)
+        resource = resources.NETWORK
+        event = events.BEFORE_DELETE
+        trigger = mock.Mock()
+        resource_id = 'net-1'
+        context = mock.Mock()
+        self.dns_integrator.before_delete_network(resource, event, trigger,
+                                                  resource_id, context)
 
         expected_filter = {
-            'network_id': [payload.resource_id],
+            'network_id': [resource_id],
             'device_owner': [subnet_dns_integrator.TF_DNS_DEVICE_OWNER]}
         expected_calls = [
-            mock.call.get_ports(payload.context, filters=expected_filter)]
+            mock.call.get_ports(context, filters=expected_filter)]
         self.core_plugin.assert_has_calls(expected_calls)
         self.core_plugin.delete_port.assert_not_called()
 
     def test_network_abort_delete_callback(self):
-        payload = self._get_payload('net-1', 'test-network')
-        kwargs = self._get_callback_params(
-            resources.NETWORK, payload, events.ABORT_DELETE)
-
         subnet1 = self._get_subnet_data('sub-1', 'test-sub-1', '10.10.10.2')
         subnet2 = self._get_subnet_data('sub-2', 'test-sub-2', '10.10.11.2')
         self._mock_core_plugin_get_subnets(subnets=[subnet1, subnet2])
         self._mock_tf_driver_get_subnet(subnet_data=[subnet1, subnet2])
         self.dns_integrator.add_dns_port_for_subnet = mock.Mock()
 
-        self.dns_integrator.abort_delete_network(**kwargs)
+        resource = resources.NETWORK
+        event = events.ABORT_DELETE
+        trigger = mock.Mock()
+        resource_id = 'net-1'
+        context = mock.Mock()
+        self.dns_integrator.abort_delete_network(resource, event, trigger,
+                                                 resource_id, context)
 
-        expected_filters = {'network_id': [payload.resource_id]}
+        expected_filters = {'network_id': [resource_id]}
         self.core_plugin.get_subnets.assert_called_with(
-            payload.context, filters=expected_filters)
+            context, filters=expected_filters)
         expected_tf_calls = [
-            mock.call.get_subnet(payload.context, subnet1['id']),
-            mock.call.get_subnet(payload.context, subnet2['id'])]
+            mock.call.get_subnet(context, subnet1['id']),
+            mock.call.get_subnet(context, subnet2['id'])]
         self.tf_driver.assert_has_calls(expected_tf_calls)
         expected_integrator_calls = [
-            mock.call(payload.context, subnet1),
-            mock.call(payload.context, subnet2)]
+            mock.call(context, subnet1),
+            mock.call(context, subnet2)]
         self.dns_integrator.add_dns_port_for_subnet.assert_has_calls(
             expected_integrator_calls)
 
@@ -234,15 +247,6 @@ class SubnetDNSCompatibilityIntegratorTestCase(testlib_api.SqlTestCase):
         params['payload'] = payload
 
         return params
-
-    def _get_payload(self, resource_id, resource_name):
-        payload = mock.Mock()
-        payload.context = self._get_fake_context()
-        payload.latest_state = {'id': resource_id,
-                                'name': resource_name}
-        payload.resource_id = resource_id
-
-        return payload
 
     def _get_fake_context(self, **kwargs):
         return mock.Mock(**kwargs)
