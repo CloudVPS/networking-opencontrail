@@ -4,7 +4,7 @@
 
 pbr>=4.0.0 # Apache-2.0
 Babel!=2.4.0,>=2.3.4 # BSD
-neutron-lib>=1.25.0 # Apache-2.0
+neutron-lib>=1.13.0 # Apache-2.0
 retrying>=1.3.3 # Apache-2.0
 PyYAML>=3.12
 jsonschema>=2.6.0
@@ -12,10 +12,10 @@ contrail-api-client>=5.1.0
 
 # These repos are installed from git in OpenStack CI if the job
 # configures them as required-projects:
-neutron>=12.0.0 # Apache-2.0
+# neutron>=12.0.0 # Apache-2.0
 
 # The comment below indicates this project repo is current with neutron-lib
 # and should receive neutron-lib consumption patches as they are released
 # in neutron-lib. It also implies the project will stay current with TC
 # and infra initiatives ensuring consumption patches can land.
-# neutron-lib-current
+ovsdbapp<1.0.0

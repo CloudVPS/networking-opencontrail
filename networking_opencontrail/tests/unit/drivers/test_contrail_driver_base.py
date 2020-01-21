@@ -64,14 +64,6 @@ class ErrorTestCases(test_extensions_base.ExtensionTestCase):
                           base._raise_contrail_error,
                           info, None)
 
-    def test_raise_contrail_error_neutron(self):
-        info = self._get_info('SubnetPoolNotFound')
-        info['subnetpool_id'] = "123chips"
-
-        self.assertRaises(exceptions.SubnetPoolNotFound,
-                          base._raise_contrail_error,
-                          info, None)
-
     def test_raise_contrail_error_l3(self):
         info = self._get_info('RouterNotFound')
         info['router_id'] = "router"
@@ -277,7 +269,7 @@ class SubnetTestCases(test_extensions_base.ExtensionTestCase):
         context = mock.Mock()
         config.max_subnet_host_routes = 0
 
-        self.assertRaises(exceptions.HostRoutesExhausted,
+        self.assertRaises(exceptions.BadRequest,
                           drv.create_subnet, context, subnet)
 
     @mock.patch("oslo_config.cfg.CONF")

@@ -47,6 +47,10 @@ def _raise_contrail_error(info, obj_name):
             info['resource'] = obj_name
         if exc_name == 'VirtualRouterNotFound':
             raise exceptions.HttpResponseError(info)
+        if exc_name == 'TenantIdProjectIdFilterConflict':
+            raise neutron_lib_exc.BadRequest(
+                resource="network",
+                msg="Both tenant_id and project_id passed as filters.")
         if hasattr(l3, exc_name):
             raise getattr(l3, exc_name)(**info)
         if hasattr(securitygroup, exc_name):
@@ -160,12 +164,19 @@ class OpenContrailDriversBase(object):
     def create_subnet(self, context, subnet):
         """Creates a new subnet, and assigns it a symbolic name."""
 
-        if subnet['subnet']['host_routes'] != ATTR_NOT_SPECIFIED:
-            if (len(subnet['subnet']['host_routes']) >
-               cfg.CONF.max_subnet_host_routes):
-                raise neutron_lib_exc.HostRoutesExhausted(
-                    subnet_id=subnet['subnet'].get('id', _('new subnet')),
-                    quota=cfg.CONF.max_subnet_host_routes)
+        host_routes = subnet['subnet']['host_routes']
+        if host_routes != ATTR_NOT_SPECIFIED:
+            if len(host_routes) > cfg.CONF.max_subnet_host_routes:
+                raise neutron_lib_exc.BadRequest(
+                    resource="subnet",
+                    msg=(
+                        "Unable to complete operation for %(subnet_id)s. The "
+                        "number of host routes exceeds the limit %(quota)s."
+                        .format(
+                            subnet_id=subnet['subnet'].get('id', 'new subnet'),
+                            quota=cfg.CONF.max_subnet_host_routes)
+                        )
+                    )
 
         return self._create_resource('subnet', context, subnet)
 

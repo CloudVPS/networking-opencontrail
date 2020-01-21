@@ -16,7 +16,6 @@
 from neutron.objects import router as l3_obj
 from neutron.services.l3_router.service_providers import base
 from neutron_lib.callbacks import events
-from neutron_lib.callbacks import priority_group
 from neutron_lib.callbacks import registry
 from neutron_lib.callbacks import resources
 from neutron_lib import constants as q_const
@@ -68,8 +67,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
         l3_obj.FloatingIP.update_object(context, {'status': status},
                                         id=fip_dict['id'])
 
-    @registry.receives(resources.ROUTER, [events.PRECOMMIT_CREATE],
-                       priority_group.PRIORITY_ROUTER_DRIVER)
+    @registry.receives(resources.ROUTER, [events.PRECOMMIT_CREATE])
     @log_helpers.log_method_call
     def router_create_precommit(self, resource, event, trigger, **kwargs):
         context = kwargs['context']
@@ -81,8 +79,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
             return
         self.driver.create_router(context, {'router': router_dict})
 
-    @registry.receives(resources.ROUTER, [events.PRECOMMIT_UPDATE],
-                       priority_group.PRIORITY_ROUTER_DRIVER)
+    @registry.receives(resources.ROUTER, [events.PRECOMMIT_UPDATE])
     @log_helpers.log_method_call
     def router_update_precommit(self, resource, event, trigger, payload=None):
         context = payload.context

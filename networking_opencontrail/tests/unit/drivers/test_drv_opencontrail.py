@@ -211,8 +211,7 @@ class ApiRequestsTestCases(test_extensions_base.ExtensionTestCase):
         info = {
             'exception': 'TenantIdProjectIdFilterConflict',
         }
-
-        self.assertRaises(exceptions.TenantIdProjectIdFilterConflict,
+        self.assertRaises(exceptions.BadRequest,
                           driver._transform_response,
                           code, info)
 
