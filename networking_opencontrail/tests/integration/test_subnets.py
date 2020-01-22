@@ -151,7 +151,7 @@ class TestSubnets(IntegrationTestCase):
             'ip_version': 4,
             'allocation_pools': [
                 {
-                    'start': '10.10.11.3',
+                    'start': '10.10.11.2',
                     'end': '10.10.11.254'
                 }
             ],
