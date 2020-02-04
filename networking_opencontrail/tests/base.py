@@ -152,6 +152,12 @@ class IntegrationTestCase(base.BaseTestCase):
         network_body['network'] = network
         return self.q_create_resource(network_body)
 
+    def q_update_network(self, q_network, **kwargs):
+        # kwargs contains dict with changed fields
+        network_body = {'network': {}}
+        network_body['network'].update(kwargs)
+        return self.q_update_resource(q_network['network'], network_body)
+
     def q_create_subnet(self, name, network_id, ip_version, cidr, **kwargs):
         subnet = {}
         subnet.update(kwargs)

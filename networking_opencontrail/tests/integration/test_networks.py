@@ -12,7 +12,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
 from networking_opencontrail.tests.base import IntegrationTestCase
 
 
@@ -45,6 +44,24 @@ class TestManageNetwork(IntegrationTestCase):
         self.assertEqual(tf_net['provider_properties']['physical_network'],
                          q_net['network']['provider:physical_network'])
         self.assertIsNotNone(tf_net['provider_properties']['segmentation_id'])
+
+    def test_update_network_vlan(self):
+        net = {
+            'name': 'test_vlan_network',
+            'provider:network_type': 'vlan',
+            'provider:physical_network': 'public',
+            'admin_state_up': True,
+        }
+        q_network = self.q_create_network(**net)
+
+        NEW_NETWORK_NAME = 'new_network_name'
+        changed_fields = {
+            'name': NEW_NETWORK_NAME,
+        }
+        q_network = self.q_update_network(q_network, **changed_fields)
+        tf_network = self.tf_get_resource('virtual-network',
+                                          q_network['network']['id'])
+        self.assertEqual(tf_network['display_name'], NEW_NETWORK_NAME)
 
     def test_create_network_vlan_with_seg_id(self):
         net = {
