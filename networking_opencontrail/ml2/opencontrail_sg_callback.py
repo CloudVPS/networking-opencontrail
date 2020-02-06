@@ -53,13 +53,13 @@ class OpenContrailSecurityGroupHandler(object):
                                   sg['id'])
 
     @log_helpers.log_method_call
-    def delete_security_group(self, resource, event, trigger, payload=None):
+    def delete_security_group(self, resource, event, trigger, **kwargs):
         """Delete Security Group callback handler for OpenContrail networking.
 
         Invokes back-end driver to delete a secutriy group from OpenContrail.
         """
-        sg = payload.latest_state
-        context = payload.context
+        sg = kwargs.get('security_group')
+        context = kwargs.get('context')
         try:
             self.client.delete_security_group(context, sg)
         except Exception as e:

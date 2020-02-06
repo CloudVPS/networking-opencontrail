@@ -37,10 +37,8 @@ class SubnetDNSCompatibilityIntegrator(object):
         self.tf_driver = tf_driver
         self.subscribe()
 
-    def before_delete_subnet(self, resource, event, trigger, payload):
-        subnet_id = payload.resource_id
-        context = payload.context
-
+    def before_delete_subnet(self, resource, event, trigger, subnet_id,
+                             context):
         try:
             dns_ports = self._get_tf_dns_for_subnet_in_neutron(context,
                                                                subnet_id)
@@ -50,10 +48,8 @@ class SubnetDNSCompatibilityIntegrator(object):
                 LOG.exception(
                     "Cannot delete DNS port for subnet %s" % subnet_id)
 
-    def before_delete_network(self, resource, event, trigger, payload=None):
-        network_id = payload.resource_id
-        context = payload.context
-
+    def before_delete_network(self, resource, event, trigger, network_id,
+                              context):
         try:
             dns_ports = self._get_tf_dns_for_network_in_neutron(context,
                                                                 network_id)
@@ -63,10 +59,8 @@ class SubnetDNSCompatibilityIntegrator(object):
                 LOG.exception(
                     "Cannot delete DNS port for network %s" % network_id)
 
-    def abort_delete_subnet(self, resource, event, trigger, payload=None):
-        subnet_id = payload.resource_id
-        context = payload.context
-
+    def abort_delete_subnet(self, resource, event, trigger, subnet_id,
+                            context):
         try:
             tf_subnet = self.tf_driver.get_subnet(context, subnet_id)
             self.add_dns_port_for_subnet(context, tf_subnet)
@@ -74,9 +68,8 @@ class SubnetDNSCompatibilityIntegrator(object):
             LOG.exception(
                 "Cannot synchronize DNS port for subnet %s" % subnet_id)
 
-    def abort_delete_network(self, resource, event, trigger, payload=None):
-        network_id = payload.resource_id
-        context = payload.context
+    def abort_delete_network(self, resource, event, trigger, network_id,
+                             context):
         subnets = self._core_plugin.get_subnets(
             context, filters={'network_id': [network_id]})
 
