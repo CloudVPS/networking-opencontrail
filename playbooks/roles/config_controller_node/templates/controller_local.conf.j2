@@ -46,7 +46,7 @@ NOVNCPROXY_URL="http://{{ hostvars['controller'].ansible_host }}:6080/vnc_lite.h
 
 enable_plugin networking-opencontrail https://git.openstack.org/openstack/networking-opencontrail {{ networking_plugin_version }}
 
-PHYSICAL_NETWORK=vhost
+PHYSICAL_NETWORK=public
 TENANT_VLAN_RANGE=1:4094
 Q_ML2_TENANT_NETWORK_TYPE=vlan
 Q_ML2_PLUGIN_MECHANISM_DRIVERS=opencontrail

@@ -333,7 +333,7 @@ class TestDeviceManager(IntegrationTestCase):
         net = {'name': 'test_vlan_{}_network'.format(vlan_id),
                'admin_state_up': True,
                'provider:network_type': 'vlan',
-               'provider:physical_network': 'vhost',
+               'provider:physical_network': 'public',
                'provider:segmentation_id': vlan_id}
         network = self.q_create_network(**net)
         return network, vlan_id
