@@ -346,47 +346,84 @@ class TestDeviceManager(IntegrationTestCase):
 
     @classmethod
     def _make_fake_fabric(cls):
-        fabric = vnc_api.Fabric('fabric01')
-        cls._fabric_uuid = cls._vnc_api.fabric_create(fabric)
-        cls._vnc_api.fabric_read(id=cls._fabric_uuid)
+        try:
+            fabric = cls._vnc_api.fabric_read(
+                ["default-global-system-config", "fabric01"]
+            )
+            cls._fabric_uuid = fabric.get_uuid()
+        except vnc_api.NoIdError:
+            fabric = vnc_api.Fabric('fabric01')
+            cls._fabric_uuid = cls._vnc_api.fabric_create(fabric)
         cls._cleanup_fabric_queue.append(('fabric', cls._fabric_uuid))
 
         for pr_name in cls.FABRIC:
-            pr = vnc_api.PhysicalRouter(pr_name)
-            pr.set_fabric(fabric)
-            pr_uuid = cls._vnc_api.physical_router_create(pr)
+            try:
+                pr = cls._vnc_api.physical_router_read(
+                    ["default-global-system-config", pr_name]
+                )
+                pr.set_fabric(fabric)
+                pr_uuid = pr.get_uuid()
+                cls._vnc_api.physical_router_update(pr)
+            except vnc_api.NoIdError:
+                pr = vnc_api.PhysicalRouter(pr_name)
+                pr.set_fabric(fabric)
+                pr_uuid = cls._vnc_api.physical_router_create(pr)
             cls._cleanup_fabric_queue.append(('physical_router', pr_uuid))
 
             for pi_name in cls.FABRIC[pr_name]:
-                pi = vnc_api.PhysicalInterface(name=pi_name, parent_obj=pr)
-                pi_uuid = cls._vnc_api.physical_interface_create(pi)
+                try:
+                    pi = cls._vnc_api.physical_interface_read([
+                        "default-global-system-config", pr_name, pi_name])
+                    pi_uuid = pi.get_uuid()
+                except vnc_api.NoIdError:
+                    pi = vnc_api.PhysicalInterface(name=pi_name, parent_obj=pr)
+                    pi_uuid = cls._vnc_api.physical_interface_create(pi)
                 cls._cleanup_fabric_queue.append(
                     ('physical_interface', pi_uuid))
 
     @classmethod
     def _make_fake_topology(cls):
         for node_name in cls.TOPOLOGY:
-            node = vnc_api.Node(node_name, node_hostname=node_name)
-            node_uuid = cls._vnc_api.node_create(node)
+            try:
+                node = cls._vnc_api.node_read(
+                    ["default-global-system-config", node_name]
+                )
+                node_uuid = node.get_uuid()
+            except vnc_api.NoIdError:
+                node = vnc_api.Node(node_name, node_hostname=node_name)
+                node_uuid = cls._vnc_api.node_create(node)
             cls._cleanup_topology_queue.append(('node', node_uuid))
 
             for port_name, port_pi in cls.TOPOLOGY[node_name].items():
-                ll_obj = vnc_api.LocalLinkConnection(switch_info=port_pi[0],
-                                                     port_id=port_pi[1])
-                bm_info = vnc_api.BaremetalPortInfo(
-                    address='00-00-00-00-00-00',
-                    local_link_connection=ll_obj)
-                node_port = vnc_api.Port(port_name, node,
-                                         bms_port_info=bm_info)
-                port_uuid = cls._vnc_api.port_create(node_port)
+                try:
+                    node_port = cls._vnc_api.port_read(
+                        ["default-global-system-config", node_name, port_name]
+                    )
+                    port_uuid = node_port.get_uuid()
+                except vnc_api.NoIdError:
+                    ll_obj = vnc_api.LocalLinkConnection(
+                        switch_info=port_pi[0],
+                        port_id=port_pi[1])
+                    bm_info = vnc_api.BaremetalPortInfo(
+                        address='00-00-00-00-00-00',
+                        local_link_connection=ll_obj)
+                    node_port = vnc_api.Port(port_name, node,
+                                             bms_port_info=bm_info)
+                    port_uuid = cls._vnc_api.port_create(node_port)
                 cls._cleanup_topology_queue.append(('port', port_uuid))
 
     @classmethod
     def _add_vpg_to_cleanup(cls):
         fabric = cls._vnc_api.fabric_read(id=cls._fabric_uuid)
-        for vpg_ref in fabric.get_virtual_port_groups() or []:
+        for vpg_ref in fabric.get_virtual_port_groups() or ():
+            vpg_uuid = vpg_ref['uuid']
             cls._cleanup_fabric_queue.append(
-                ('virtual_port_group', vpg_ref['uuid']))
+                ('virtual_port_group', vpg_uuid))
+            vpg = cls._vnc_api.virtual_port_group_read(id=vpg_uuid)
+            for vmi_ref in vpg.get_virtual_machine_interface_refs() or ():
+                cls._cleanup_fabric_queue.append(
+                    ('virtual_machine_interface', vmi_ref['uuid'])
+                )
 
     @classmethod
     def _cleanup(cls):
@@ -399,6 +436,8 @@ class TestDeviceManager(IntegrationTestCase):
                     del_func = getattr(cls._vnc_api,
                                        "{}_delete".format(resource))
                     del_func(id=res_uuid)
+                except vnc_api.NoIdError:
+                    pass
                 except Exception:
                     reraise = True
 
