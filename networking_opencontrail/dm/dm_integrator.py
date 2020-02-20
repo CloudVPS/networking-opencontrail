@@ -101,12 +101,16 @@ class DeviceManagerIntegrator(object):
         existing_vmi = self.tf_client.get_virtual_machine_interface(
             fq_name=vmi_fq_name)
 
+        # self._core_plugin.get_ports doesn't filter well enough,
+        # need to be filtered manually afterwards
+        # (using function self._is_same_vmi)
         vmi_ports = self._core_plugin.get_ports(
             context, filters={
                 'network_id': [port['network_id']],
                 'binding:host_id': [port['binding:host_id']]})
-        are_ports_assigned = any(
-            port for port in vmi_ports if self._check_should_be_tagged(port))
+
+        are_ports_assigned = any(self._ports_with_same_vmi(port, vmi_ports))
+
         if existing_vmi and not are_ports_assigned:
             self._detach_vmi_from_vpg(existing_vmi)
             self.tf_client.delete_virtual_machine_interface(
@@ -126,6 +130,16 @@ class DeviceManagerIntegrator(object):
                 return False
         return True
 
+    @staticmethod
+    def _has_same_vmi(port, other_port):
+        network_id_is_same = (
+            port['network_id'] == other_port['network_id']
+        )
+        binding_host_id_is_same = (
+            port['binding:host_id'] == other_port['binding:host_id']
+        )
+        return network_id_is_same and binding_host_id_is_same
+
     def _check_should_be_tagged(self, port):
         if not self._check_contains_required_fields(port):
             return False
@@ -138,6 +152,11 @@ class DeviceManagerIntegrator(object):
         if not managed_host or not device_id or not compute_owner:
             return False
         return True
+
+    def _ports_with_same_vmi(self, compared_port, ports):
+        return [port for port in ports
+                if self._has_same_vmi(compared_port, port)
+                and self._check_should_be_tagged(port)]
 
     def _detach_vmi_from_vpg(self, vmi):
         vpg_refs = vmi.get_virtual_port_group_back_refs()

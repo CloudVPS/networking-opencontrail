@@ -410,6 +410,139 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         self.tf_client.assert_has_calls(tf_expected_calls)
         self.tf_client.delete_virtual_machine_interface.assert_not_called()
 
+    def test_has_same_vmi__matches(self):
+        port = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-1',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-1'
+        }
+        other_port = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-2',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-2'
+        }
+
+        result = self.dm_integrator._has_same_vmi(port, other_port)
+        self.assertTrue(result)
+
+    def test_has_same_vmi_not_matches_network_id(self):
+        port = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-1',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-1'
+        }
+        other_port = {
+            'network_id': 'net-2',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-2',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-2'
+        }
+
+        result = self.dm_integrator._has_same_vmi(port, other_port)
+        self.assertFalse(result)
+
+    def test_has_same_vmi_not_matches_binding_host_id(self):
+        port = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-1',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-1'
+        }
+        other_port = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute2',
+            'device_id': 'vm-2',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-2'
+        }
+
+        result = self.dm_integrator._has_same_vmi(port, other_port)
+        self.assertFalse(result)
+
+    @mock.patch('networking_opencontrail.dm.dm_integrator'
+                '.DeviceManagerIntegrator._check_should_be_tagged')
+    def test_ports_with_same_vmi_matches(self, _):
+        compared_port = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-1',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-1'
+        }
+
+        port_with_same_vmi = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-4',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-4'
+        }
+
+        ports = [
+            {
+                'network_id': 'net-2',
+                'binding:host_id': 'compute1',
+                'device_id': 'vm-2',
+                'device_owner': 'compute:nova-zone',
+                'id': 'port-2'
+            },
+            {
+                'network_id': 'net-1',
+                'binding:host_id': 'compute2',
+                'device_id': 'vm-3',
+                'device_owner': 'compute:nova-zone',
+                'id': 'port-3'
+            },
+            port_with_same_vmi
+        ]
+
+        result = self.dm_integrator._ports_with_same_vmi(compared_port, ports)
+        self.assertEqual([port_with_same_vmi], result)
+
+    def test_ports_with_same_vmi_not_matches(self):
+        compared_port = {
+            'network_id': 'net-1',
+            'binding:host_id': 'compute1',
+            'device_id': 'vm-1',
+            'device_owner': 'compute:nova-zone',
+            'id': 'port-1'
+        }
+
+        ports = [
+            {
+                'network_id': 'net-2',
+                'binding:host_id': 'compute1',
+                'device_id': 'vm-2',
+                'device_owner': 'compute:nova-zone',
+                'id': 'port-2'
+            },
+            {
+                'network_id': 'net-1',
+                'binding:host_id': 'compute2',
+                'device_id': 'vm-3',
+                'device_owner': 'compute:nova-zone',
+                'id': 'port-3'
+            },
+            {
+                'network_id': 'net-1',
+                'binding:host_id': 'compute3',
+                'device_id': 'vm-4',
+                'device_owner': 'compute:nova-zone',
+                'id': 'port-4'
+            },
+        ]
+
+        result = self.dm_integrator._ports_with_same_vmi(compared_port, ports)
+        self.assertEqual([], result)
+
     @property
     def _port_data(self):
         port_data = {'network_id': 'net-1',
