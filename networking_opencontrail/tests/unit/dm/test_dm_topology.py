@@ -17,10 +17,8 @@ import ddt
 import mock
 
 from networking_opencontrail.dm.dm_topology import DmTopologyApi
-from networking_opencontrail.dm.dm_topology import DmTopologyFile
 from networking_opencontrail.dm.dm_topology import InvalidNodeError
 from networking_opencontrail.dm.dm_topology import NodeNotFoundError
-from networking_opencontrail.dm.dm_topology_loader import ConfigInvalidFormat
 from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.tests import base
 
@@ -34,7 +32,6 @@ class DmTopologyApiTestCase(base.TestCase):
         self.tf_client = mock.Mock(spec_set=VncApiClient())
 
         self.dm_topology = DmTopologyApi(self.tf_client)
-        self.dm_topology.initialize()
 
     def test_contains_host_true_when_in_api(self):
         self.tf_client.read_node_by_hostname = mock.Mock(
@@ -166,59 +163,3 @@ class DmTopologyApiTestCase(base.TestCase):
 
         self.tf_client.read_node_by_hostname = mock.Mock(return_value=node)
         self.tf_client.get_port = mock.Mock(side_effect=[port_1, port_2])
-
-
-@ddt.ddt
-class DmTopologyFileTestCase(base.TestCase):
-    @mock.patch("oslo_config.cfg.CONF")
-    def setUp(self, config):
-        super(DmTopologyFileTestCase, self).setUp()
-
-        self.dm_topology = DmTopologyFile('path/')
-        self.dm_topology.topology_loader.load = mock.Mock(
-            return_value=self._get_topology())
-        self.dm_topology.initialize()
-
-    @mock.patch("networking_opencontrail.dm.dm_topology.DmTopologyLoader")
-    def test_file_topology_is_loaded_on_initializing(self, loader):
-        topology = mock.Mock()
-        loader().load = mock.Mock(return_value=topology)
-        dm_topology = DmTopologyFile('path/')
-
-        dm_topology.initialize()
-
-        self.assertEqual(dm_topology.topology, topology)
-
-    def test_file_topology_should_be_validated_on_initializing(self):
-        self.dm_topology.topology_loader.load = \
-            mock.Mock(side_effect=ConfigInvalidFormat)
-        self.assertRaises(ConfigInvalidFormat, self.dm_topology.initialize)
-
-    def test_contains_host_true_when_in_topology_file(self):
-        result = "compute1" in self.dm_topology
-        self.assertEqual(True, result)
-
-    @ddt.data('not-managed', None)
-    def test_contains_host_false_when_not_in_topology_file(self, host_id):
-        result = host_id in self.dm_topology
-        self.assertEqual(False, result)
-
-    def test_get_node_from_file(self):
-        node = self.dm_topology.get_node('compute1')
-
-        expected_node = {'name': 'compute1',
-                         'ports': [{'name': 'ens1f1',
-                                    'switch_name': 'leaf1',
-                                    'port_name': 'xe-0/0/1'}]}
-        self.assertEqual(expected_node, node)
-
-    @ddt.data('not-managed', None)
-    def test_get_node_from_file_raise_when_not_in_topology(self, host_id):
-        self.assertRaises(NodeNotFoundError,
-                          self.dm_topology.get_node,
-                          host_id)
-
-    def _get_topology(self):
-        switch_port = {'name': 'ens1f1', 'switch_name': 'leaf1',
-                       'port_name': 'xe-0/0/1'}
-        return {'compute1': {'name': 'compute1', 'ports': [switch_port]}}

@@ -44,10 +44,6 @@ class DeviceManagerIntegrator(object):
         self.tf_client = VncApiClient()
         self.bindings_helper = DmBindingsHelper(self.tf_client)
 
-    def initialize(self):
-        if self.enabled:
-            self.bindings_helper.initialize()
-
     def sync_vlan_tagging_for_port(self, context, port, previous_port):
         if self._check_data_was_changed(port, previous_port):
             self.delete_vlan_tagging_for_port(context, previous_port)
