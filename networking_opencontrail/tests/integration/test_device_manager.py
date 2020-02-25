@@ -81,11 +81,14 @@ class TestDeviceManager(IntegrationTestCase):
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
                 'device_id': 'vm-1',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'mac_address': '11:11:11:11:11:11'
+                }
         self.q_create_port(**port)
 
         port.update({'device_id': 'vm-2',
-                     'binding:host_id': 'compute-2'})
+                     'binding:host_id': 'compute-2',
+                     'mac_address': '22:22:22:22:22:22'})
         self.q_create_port(**port)
 
         vpg_uuids = set()
