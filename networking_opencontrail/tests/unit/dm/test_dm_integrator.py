@@ -34,7 +34,6 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         dm_integrator.VncApiClient = mock.Mock(spec_set=VncApiClient)
 
         self.dm_integrator = dm_integrator.DeviceManagerIntegrator()
-        self.dm_integrator.initialize()
 
         self.core_plugin = self.dm_integrator._core_plugin
         self.tf_client = self.dm_integrator.tf_client
@@ -51,28 +50,6 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
         with mock.patch("oslo_config.cfg.CONF",
                         DM_INTEGRATION=mock.MagicMock(enabled=False)):
             self.assertEqual(self.dm_integrator.enabled, False)
-
-    @mock.patch("oslo_config.cfg.CONF",
-                DM_INTEGRATION=mock.MagicMock(enabled=False))
-    @mock.patch("networking_opencontrail.dm.dm_integrator"
-                ".DmBindingsHelper")
-    def test_bindings_helper_is_not_initialized_when_disabled(self, helper, _):
-        integrator = dm_integrator.DeviceManagerIntegrator()
-
-        integrator.initialize()
-
-        helper().initialize.assert_not_called()
-
-    @mock.patch("oslo_config.cfg.CONF",
-                DM_INTEGRATION=mock.MagicMock(enabled=True))
-    @mock.patch("networking_opencontrail.dm.dm_integrator"
-                ".DmBindingsHelper")
-    def test_bindings_helper_is_loaded_on_initializing(self, helper, _):
-        integrator = dm_integrator.DeviceManagerIntegrator()
-
-        integrator.initialize()
-
-        helper().initialize.assert_called_once()
 
     @ddt.data(1, 100, 4094)
     def test_sync_create_tagging_for_port_on_plug_to_vm(self, vlan_tag):

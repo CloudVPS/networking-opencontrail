@@ -12,35 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-import abc
-import six
-
 from oslo_log import log as logging
 
-from networking_opencontrail.dm.dm_topology_loader import DmTopologyLoader
 
 LOG = logging.getLogger(__name__)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class DmTopologyBase(object):
-
-    def initialize(self):
-        """Load resources from drive to memory."""
-        pass
-
-    @abc.abstractmethod
-    def get_node(self, node_id):
-        """Get requested node data from topology."""
-
-    def __contains__(self, host_id):
-        try:
-            return self.get_node(host_id) is not None
-        except NodeNotFoundError:
-            return False
-
-
-class DmTopologyApi(DmTopologyBase):
+class DmTopologyApi(object):
     """Object contaning node topology based on Tungsten API."""
 
     def __init__(self, client):
@@ -79,33 +57,6 @@ class DmTopologyApi(DmTopologyBase):
     def _check_node_exists_in_api(self, host_id):
         vnc_node = self.tf_client.read_node_by_hostname(host_id)
         return vnc_node is not None
-
-
-class DmTopologyFile(DmTopologyBase):
-    """Object contaning node topology based on topology file declaration."""
-
-    def __init__(self, topology_file):
-        self.topology_loader = DmTopologyLoader(topology_file)
-        self.topology = None
-
-    def __contains__(self, host_id):
-        return self.get_node_from_file(host_id) is not None
-
-    def get_node(self, host_id):
-        node = self.get_node_from_file(host_id)
-        if not node:
-            LOG.error("Try to get node for host %s, but node not found" %
-                      host_id)
-            raise NodeNotFoundError
-        return node
-
-    def initialize(self):
-        self.topology = self.topology_loader.load()
-
-    def get_node_from_file(self, host_id):
-        if not self.topology:
-            return None
-        return self.topology.get(host_id)
 
 
 class NodeNotFoundError(Exception):
