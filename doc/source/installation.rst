@@ -54,7 +54,7 @@ Manual configuration
 
    .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
       :language: ini
-      :lines: 5-7
+      :lines: 5-6
 
 #. Make sure you include all config files in the Neutron server parameters::
 
@@ -102,7 +102,7 @@ Assume that the Kolla was deployed using this guide: `kolla_quickstart`_.
 
    .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
       :language: ini
-      :lines: 5-7
+      :lines: 5-6
 
 #. Edit ``/etc/kolla/neutron-server/config.json``:
 

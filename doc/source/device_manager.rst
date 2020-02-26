@@ -31,17 +31,15 @@ Enable integration
 Configuration options are inside group ``DM_INTEGRATION`` in plugin config
 file, typically in ``/etc/neutron/plugins/ml2/ml2_conf_opencontrail.ini``
 
-There are two options:
+There is one option:
 
 * ``enabled`` is boolean and should be set to ``True`` to enable integration
   with Device Manager; default value is ``False``,
-* ``topology`` is a place for path to file with details about computes and
-  their physical connections. This is optional and when not set, topology
-  is got from Tungsten Fabric API.
+
 
 .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
    :language: ini
-   :lines: 5-7
+   :lines: 5-6
 
 After changing configuration restart Open Stack service.
 
@@ -50,31 +48,19 @@ Describing topology
 
 As written above, topology includes list of compute hosts and their connections
 to switches. Integration with Device Manager will be provided only for listed
-computes and there will be no impact for other hosts. There are two ways to
-describe topology.
+computes and there will be no impact for other hosts.
 
-**First** is to use a YAML file and
-set paths to compute hosts in ``topology`` option. Each node represents one compute host.
-It should contain unique name and a list of ports where compute is connected,
-including names of a switch and port on it. Example file is below.
+To describe topology, Tungsten Fabric API is used. Each ``node`` should represent a single compute host and
+have refs to their ``ports``, which should be connected to related ``physical interfaces``.
 
-.. literalinclude:: samples/topology.yaml.sample
-   :language: yaml
-
-**Second** is to use Tungsten Fabric API. This way works by leaving
-``topology`` setting empty and importing details about nodes into TF. Each ``node`` should
-represent a single compute host and have refs to their ``ports``, which should
-be connected to related ``physical interfaces``.
-
-Changes in topology file require a plugin reload, but changes made using API are applied
-immediately. At this moment, no changes have any impact on existing VM
-connections.
+Changes made using API are applied immediately. At this moment, no changes have any impact
+on existing VM connections.
 
 .. important::
 
-    In either case, the name of node must be the same as compute name used by
-    Open Stack. Integration is only triggered when compute name matches to one
-    of the nodes in topology.
+    The name of node must be the same as compute name used by Open Stack.
+    Integration is only triggered when compute name matches to one of the nodes
+    in topology.
 
 Usage
 =====

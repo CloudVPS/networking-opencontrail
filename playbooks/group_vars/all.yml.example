@@ -27,10 +27,6 @@ install_networking_bgpvpn_plugin: false
 # encapsulation priorities will be set to 'VXLAN,MPLSoUDP,MPLSoGRE'.
 dm_integration_enabled: false
 
-# Optional path to file with topology for DM integration. When set and
-# DM integration enabled, topology.yaml file will be copied to this location
-dm_topology_file:
-
 # If true, password to the created instances for current ansible user
 # will be set to value of instance_password
 change_password: false

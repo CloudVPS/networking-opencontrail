@@ -3,6 +3,3 @@
   template:
     src: controller_local.conf.j2
     dest: ~/devstack/local.conf
-
-- include: dm_integration.yml
-  when: dm_integration_enabled
