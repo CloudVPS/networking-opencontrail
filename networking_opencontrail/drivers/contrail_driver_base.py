@@ -13,7 +13,6 @@
 #    under the License.
 #
 
-from neutron.extensions import portbindings
 from neutron.extensions import securitygroup
 from neutron_lib.exceptions import allowedaddresspairs
 from neutron_lib.exceptions import l3
@@ -25,19 +24,12 @@ from neutron_lib import exceptions as neutron_lib_exc
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import importutils
 
 from networking_opencontrail.common import exceptions
 from networking_opencontrail.common import utils
 
-# Constant for max length of network interface names
-# eg 'bridge' in the Network class or 'devname' in
-# the VIF class
-NIC_NAME_LEN = 14
 
 LOG = logging.getLogger(__name__)
-
-NEUTRON_CONTRAIL_PREFIX = 'NEUTRON'
 
 
 def _raise_contrail_error(info, obj_name):
@@ -63,39 +55,6 @@ def _raise_contrail_error(info, obj_name):
 
 
 class OpenContrailDriversBase(object):
-
-    def _parse_class_args(self):
-        """Parse the contrailplugin.ini file.
-
-        Opencontrail supports extension such as ipam, policy, these extensions
-        can be configured in the plugin configuration file as shown below.
-        Plugin then loads the specified extensions.
-        contrail_extensions=ipam:<classpath>,policy:<classpath>
-        """
-
-        contrail_extensions = cfg.CONF.APISERVER.contrail_extensions
-        # If multiple class specified for same extension, last one will win
-        # according to DictOpt behavior
-        for ext_name, ext_class in contrail_extensions.items():
-            try:
-                if not ext_class or ext_class == 'None':
-                    self.supported_extension_aliases.append(ext_name)
-                    continue
-                ext_class = importutils.import_class(ext_class)
-                ext_instance = ext_class()
-                ext_instance.set_core(self)
-                for method in dir(ext_instance):
-                    for prefix in ['get', 'update', 'delete', 'create']:
-                        if method.startswith('%s_' % prefix):
-                            setattr(self, method,
-                                    ext_instance.__getattribute__(method))
-                self.supported_extension_aliases.append(ext_name)
-            except Exception:
-                LOG.exception("Contrail Backend Error")
-                # Converting contrail backend error to Neutron Exception
-                raise exceptions.InvalidContrailExtensionError(
-                    ext_name=ext_name, ext_class=ext_class)
-        self._build_auth_details()
 
     def _build_auth_details(self):
         pass
@@ -212,28 +171,6 @@ class OpenContrailDriversBase(object):
 
         subnets_count = self._count_resource('subnet', context, filters)
         return subnets_count['count']
-
-    def _make_port_dict(self, port, fields=None):
-        """filters attributes of a port based on fields."""
-
-        if portbindings.VIF_TYPE in port and \
-            port[portbindings.VIF_TYPE] == portbindings.VIF_TYPE_VHOST_USER:
-            vhostuser = True
-        else:
-            vhostuser = False
-
-        if not fields:
-            port.update(self.base_binding_dict)
-        else:
-            for key in self.base_binding_dict:
-                if key in fields:
-                    port[key] = self.base_binding_dict[key]
-
-        # Update bindings for vhostuser vif support
-        if vhostuser:
-            self._update_vhostuser_cfg_for_port(port)
-
-        return port
 
     def _get_port(self, context, id, fields=None):
         return self._get_resource('port', context, id, fields)
@@ -423,75 +360,6 @@ class OpenContrailDriversBase(object):
 
         self._delete_resource('floatingip', context, ip_id)
 
-    # Route table handlers
-    def create_route_table(self, context, table):
-        """Creates a route table."""
-
-        return self._create_resource('route_table', context, table)
-
-    def get_route_table(self, context, table_id, fields=None):
-        """Gets the attributes of a route table."""
-
-        return self._get_resource('route_table', context, table_id, fields)
-
-    def update_route_table(self, context, table_id, table):
-        """Updates the attributes of a route table."""
-
-        return self._update_resource('route_table', context, table_id,
-                                     table)
-
-    def delete_route_table(self, context, table_id):
-        """Deletes a route table."""
-
-        self._delete_resource('route_table', context, table_id)
-
-    def get_route_tables(self, context, filters=None, fields=None):
-        """Retrieves all route tables identifiers."""
-
-        return self._list_resource('route_table', context, filters, fields)
-
-    def get_route_tables_count(self, context, filters=None):
-        """Gets the count of route tables."""
-
-        route_tables_count = self._count_resource('route_table', context,
-                                                  filters)
-        return route_tables_count['count']
-
-    # NAT instance handlers
-    def create_nat_instance(self, context, instance):
-        """Creates a NAT instance."""
-
-        return self._create_resource('nat_instance', context, instance)
-
-    def get_nat_instance(self, context, instance_id, fields=None):
-        """Gets the attributes of a NAT instance."""
-
-        return self._get_resource('nat_instance', context, instance_id,
-                                  fields)
-
-    def update_nat_instance(self, context, instance_id, instance):
-        """Updates the attributes of a NAT instance."""
-
-        return self._update_resource('nat_instance', context, instance_id,
-                                     instance)
-
-    def delete_nat_instance(self, context, instance_id):
-        """Deletes a NAT instance."""
-
-        self._delete_resource('nat_instance', context, instance_id)
-
-    def get_nat_instances(self, context, filters=None, fields=None):
-        """Retrieves all NAT instances identifiers."""
-
-        return self._list_resource('nat_instance', context, filters, fields)
-
-    def get_nat_instances_count(self, context, filters=None):
-        """Gets the count of NAT instances."""
-
-        nat_instances_count = self._count_resource('nat_instance', context,
-                                                   filters)
-        return nat_instances_count['count']
-
     # Security Group handlers
     def create_security_group(self, context, security_group):
         """Creates a Security Group."""
@@ -515,13 +383,12 @@ class OpenContrailDriversBase(object):
 
         self._delete_resource('security_group', context, sg_id)
 
-    def get_security_groups(self, context, filters=None, fields=None,
-                            sorts=None, limit=None, marker=None,
-                            page_reverse=False):
+    def get_security_groups(
+        self, context, filters=None, fields=None, *args, **kwargs):
         """Retrieves all security group identifiers."""
 
-        return self._list_resource('security_group', context,
-                                   filters, fields)
+        return self._list_resource(
+            'security_group', context, filters, fields)
 
     def get_security_groups_count(self, context, filters=None):
         """Gets the count of security groups."""
@@ -551,13 +418,12 @@ class OpenContrailDriversBase(object):
     def get_security_group_rule(self, context, sg_rule_id, fields=None):
         """Gets the attributes of a security group rule."""
 
-        return self._get_resource('security_group_rule', context,
-                                  sg_rule_id, fields)
+        return self._get_resource(
+            'security_group_rule', context, sg_rule_id, fields)
 
-    def get_security_group_rules(self, context, filters=None, fields=None,
-                                 sorts=None, limit=None, marker=None,
-                                 page_reverse=False):
+    def get_security_group_rules(
+        self, context, filters=None, fields=None, *args, **kwargs):
         """Retrieves all security group rules."""
 
-        return self._list_resource('security_group_rule', context,
-                                   filters, fields)
+        return self._list_resource(
+            'security_group_rule', context, filters, fields)

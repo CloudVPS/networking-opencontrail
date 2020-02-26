@@ -13,18 +13,6 @@
 #    under the License.
 #
 
-from neutron._i18n import _
-from neutron_lib import exceptions as n_exc
-
-
-class AuthStrategyNotSupported(n_exc.NeutronException):
-        message = _("Authentication strategy %(auth_strategy)s is not "
-                    "supported.")
-
-
-class InvalidContrailExtensionError(n_exc.ServiceUnavailable):
-    message = _("Invalid Contrail Extension: %(ext_name) %(ext_class)")
-
 
 class HttpResponseError(Exception):
     def __init__(self, resp_info):
