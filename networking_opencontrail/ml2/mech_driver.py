@@ -49,7 +49,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
         self.subnet_handler = (
             subnet_dns_integrator.SubnetDNSCompatibilityIntegrator(self.drv))
         self.dm_integrator = dm_integrator.DeviceManagerIntegrator()
-        self.dm_integrator.initialize()
         self.tf_client = VncApiClient()
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
