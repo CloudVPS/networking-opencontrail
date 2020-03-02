@@ -43,13 +43,17 @@ class OpenContrailMechDriver(api.MechanismDriver):
     """
 
     def initialize(self):
-        self.drv = drv.OpenContrailDrivers()
+        tf_client = VncApiClient()
+        tf_driver = drv.OpenContrailDrivers()
+
+        self.tf_client = tf_client
+        self.drv = tf_driver
+        self.dm_integrator = dm_integrator.DeviceManagerIntegrator(tf_client)
         self.sg_handler = (
             opencontrail_sg_callback.OpenContrailSecurityGroupHandler(self))
         self.subnet_handler = (
-            subnet_dns_integrator.SubnetDNSCompatibilityIntegrator(self.drv))
-        self.dm_integrator = dm_integrator.DeviceManagerIntegrator()
-        self.tf_client = VncApiClient()
+            subnet_dns_integrator.SubnetDNSCompatibilityIntegrator(tf_driver))
+
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
     def create_network_postcommit(self, context):

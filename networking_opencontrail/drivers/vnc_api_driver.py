@@ -13,8 +13,6 @@
 #    under the License.
 #
 
-import functools
-
 from oslo_config import cfg
 from oslo_log import log as logging
 
@@ -28,38 +26,41 @@ class VncApiClient(object):
     ID_PERMS = vnc_api.IdPermsType(
         creator="networking-opencontrail", enable=True)
 
-    class vnc_connect(object):
-        """Connect to VNC API on first use method that needs connection"""
-
-        def __init__(self, func):
-            functools.update_wrapper(self, func)
-            self._func = func
-
-        def __call__(self, obj, *args, **kwargs):
-            if not obj.vnc_lib:
-                obj.vnc_lib = vnc_api.VncApi(
-                    api_server_host=cfg.CONF.APISERVER.api_server_ip,
-                    api_server_port=cfg.CONF.APISERVER.api_server_port,
-                    api_server_use_ssl=cfg.CONF.APISERVER.use_ssl,
-                    apicertfile=cfg.CONF.APISERVER.certfile,
-                    apikeyfile=cfg.CONF.APISERVER.keyfile,
-                    apicafile=cfg.CONF.APISERVER.cafile,
-                    apiinsecure=cfg.CONF.APISERVER.insecure,
-                    auth_type=cfg.CONF.auth_strategy,
-                    auth_host=cfg.CONF.keystone_authtoken.auth_host,
-                    auth_port=cfg.CONF.keystone_authtoken.auth_port,
-                    auth_protocol=cfg.CONF.keystone_authtoken.auth_protocol,
-                    tenant_name=cfg.CONF.keystone_authtoken.admin_tenant_name,
-                    kscertfile=cfg.CONF.keystone_authtoken.certfile,
-                    kskeyfile=cfg.CONF.keystone_authtoken.keyfile,
-                    ksinsecure=cfg.CONF.keystone_authtoken.insecure)
-            return self._func(obj, *args, **kwargs)
-
-        def __get__(self, instance, instancetype):
-            return functools.partial(self.__call__, instance)
+    vnc_lib = None
 
     def __init__(self):
-        self.vnc_lib = None
+        self.connect()
+
+    @classmethod
+    def connect(cls):
+        """Create new session with the contrail API.
+
+        If previously session was created, reuse exising session.
+        """
+        if cls.vnc_lib:
+            return
+
+        config = {
+            "api_server_host": cfg.CONF.APISERVER.api_server_ip,
+            "api_server_port": cfg.CONF.APISERVER.api_server_port,
+            "api_server_use_ssl": cfg.CONF.APISERVER.use_ssl,
+            "apicertfile": cfg.CONF.APISERVER.certfile,
+            "apikeyfile": cfg.CONF.APISERVER.keyfile,
+            "apicafile": cfg.CONF.APISERVER.cafile,
+            "apiinsecure": cfg.CONF.APISERVER.insecure,
+            "auth_type": cfg.CONF.auth_strategy,
+            "auth_host": cfg.CONF.keystone_authtoken.auth_host,
+            "auth_port": cfg.CONF.keystone_authtoken.auth_port,
+            "auth_protocol": cfg.CONF.keystone_authtoken.auth_protocol,
+            "tenant_name": cfg.CONF.keystone_authtoken.admin_tenant_name,
+            "kscertfile": cfg.CONF.keystone_authtoken.certfile,
+            "kskeyfile": cfg.CONF.keystone_authtoken.keyfile,
+            "ksinsecure": cfg.CONF.keystone_authtoken.insecure
+        }
+
+        session = vnc_api.VncApi(**config)
+
+        cls.vnc_lib = session
 
     def read_pi_from_switch(self, switch_name, pi_name):
         pi_fq_name = [self.DEFAULT_GLOBAL_CONF, switch_name, pi_name]
@@ -111,28 +112,24 @@ class VncApiClient(object):
         return self._get_object("virtual_router",
                                 uuid=uuid, fq_name=fq_name)
 
-    @vnc_connect
     def create_virtual_machine_interface(self, vmi):
         try:
             self.vnc_lib.virtual_machine_interface_create(vmi)
         except vnc_api.RefsExistError:
             LOG.debug("VMI %s already exists in VNC", vmi.name)
 
-    @vnc_connect
     def delete_virtual_machine_interface(self, fq_name):
         try:
             self.vnc_lib.virtual_machine_interface_delete(fq_name=fq_name)
         except vnc_api.NoIdError:
             LOG.warning("Cannot delete VMI %s: not exists" % fq_name)
 
-    @vnc_connect
     def update_virtual_port_group(self, vpg):
         try:
             self.vnc_lib.virtual_port_group_update(vpg)
         except vnc_api.NoIdError:
             LOG.warning("Cannot update VPG %s: not exists" % vpg.name)
 
-    @vnc_connect
     def _get_object(self, obj_name, uuid=None, fq_name=None):
         func_name = "%s_read" % obj_name
         read_obj = getattr(self.vnc_lib, func_name)

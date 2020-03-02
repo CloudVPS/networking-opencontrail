@@ -31,9 +31,10 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
     def setUp(self, _, config):
         super(DeviceManagerIntegratorTestCase, self).setUp()
         dm_integrator.directory.get_plugin = mock.Mock()
-        dm_integrator.VncApiClient = mock.Mock(spec_set=VncApiClient)
+        tf_client = mock.Mock(spec_set=VncApiClient)
+        dm_integrator.VncApiClient = tf_client
 
-        self.dm_integrator = dm_integrator.DeviceManagerIntegrator()
+        self.dm_integrator = dm_integrator.DeviceManagerIntegrator(tf_client)
 
         self.core_plugin = self.dm_integrator._core_plugin
         self.tf_client = self.dm_integrator.tf_client
@@ -80,7 +81,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 bindings, tf_project),
             mock.call.create_virtual_machine_interface(tf_created_vmi)
         ]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         bindings_helper_expected_calls = [
             mock.call.check_host_managed('compute1'),
             mock.call.get_bindings_for_host('compute1')
@@ -122,7 +123,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                                                      bindings, tf_project),
             mock.call.create_virtual_machine_interface(tf_created_vmi)
         ]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         bindings_helper_expected_calls = [
             mock.call.check_host_managed('compute1'),
             mock.call.get_bindings_for_host('compute1')
@@ -230,7 +231,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 fq_name=tf_project.fq_name + [expected_vmi_name]),
             mock.call.get_virtual_network("net-1")
         ]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.tf_client.make_virtual_machine_interface.assert_not_called()
         self.tf_client.create_virtual_machine_interface.assert_not_called()
         self.bindings_helper.check_host_managed.assert_called_with('compute1')
@@ -257,7 +258,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 str(uuid.UUID("12345678123456781234567812345678"))),
             mock.call.get_virtual_machine_interface(
                 fq_name=tf_project.fq_name + [expected_vmi_name])]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.bindings_helper.check_host_managed.assert_called_with('compute1')
         self.core_plugin.get_network.assert_called_with(context, "net-1")
         self.tf_client.create_virtual_machine_interface.assert_not_called()
@@ -297,7 +298,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
             mock.call.get_virtual_port_group("vpg-id-1"),
             mock.call.update_virtual_port_group(vpg),
             mock.call.delete_virtual_machine_interface(fq_name=vmi_fq_name)]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.core_plugin.get_ports.assert_called_with(
             context, filters={
                 'network_id': [port['network_id']],
@@ -384,7 +385,7 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
                 str(uuid.UUID("12345678123456781234567812345678"))),
             mock.call.get_virtual_machine_interface(
                 fq_name=vmi_fq_name)]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.tf_client.delete_virtual_machine_interface.assert_not_called()
 
     def test_has_same_vmi__matches(self):

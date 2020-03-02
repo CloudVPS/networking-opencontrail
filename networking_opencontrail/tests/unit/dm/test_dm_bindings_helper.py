@@ -32,7 +32,7 @@ class DmBindingsHelperTestCase(base.TestCase):
     @mock.patch("networking_opencontrail.dm.dm_bindings_helper.DmTopologyApi")
     def setUp(self, topology):
         super(DmBindingsHelperTestCase, self).setUp()
-        self.tf_client = mock.Mock(spec_set=VncApiClient())
+        self.tf_client = mock.Mock(spec_set=VncApiClient)
         self.dm_topology = mock.Mock(spec_set=DmTopologyApi)
         topology.return_value = self.dm_topology
 
@@ -77,7 +77,7 @@ class DmBindingsHelperTestCase(base.TestCase):
             mock.call.read_pi_from_switch('leaf1', 'xe-0/0/1'),
             mock.call.make_key_value_pairs(expected_bindings)
         ]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.dm_topology.get_node.assert_called_with('compute1')
         self.assertEqual(tf_kvpairs, bindings)
 
@@ -106,7 +106,7 @@ class DmBindingsHelperTestCase(base.TestCase):
             mock.call.get_virtual_port_group(uuid='vpg-id-1'),
             mock.call.make_key_value_pairs(expected_bindings),
         ]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.dm_topology.get_node.assert_called_with('compute1')
         self.assertEqual(tf_kvpairs, bindings)
 
@@ -136,7 +136,7 @@ class DmBindingsHelperTestCase(base.TestCase):
             mock.call.get_virtual_port_group(uuid='vpg-id-1'),
             mock.call.make_key_value_pairs(expected_bindings),
         ]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.dm_topology.get_node.assert_called_with('compute1')
         self.assertEqual(tf_kvpairs, bindings)
 
@@ -166,7 +166,7 @@ class DmBindingsHelperTestCase(base.TestCase):
             mock.call.get_virtual_port_group(uuid='vpg-id-2'),
             mock.call.make_key_value_pairs(expected_bindings),
         ]
-        self.tf_client.assert_has_calls(tf_expected_calls)
+        self.assertEqual(self.tf_client.mock_calls, tf_expected_calls)
         self.dm_topology.get_node.assert_called_with('compute1')
         self.assertEqual(tf_kvpairs, bindings)
 

@@ -21,7 +21,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from networking_opencontrail.dm.dm_bindings_helper import DmBindingsHelper
-from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 
 LOG = logging.getLogger(__name__)
 
@@ -40,9 +39,9 @@ class DeviceManagerIntegrator(object):
         'device_owner',
         'network_id']
 
-    def __init__(self):
-        self.tf_client = VncApiClient()
-        self.bindings_helper = DmBindingsHelper(self.tf_client)
+    def __init__(self, tf_client):
+        self.tf_client = tf_client
+        self.bindings_helper = DmBindingsHelper(tf_client)
 
     def sync_vlan_tagging_for_port(self, context, port, previous_port):
         if self._check_data_was_changed(port, previous_port):

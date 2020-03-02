@@ -28,15 +28,21 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     driver APIs as they would normally be invoked by the driver.
     """
 
-    def setUp(self):
+    @mock.patch(
+        "networking_opencontrail.drivers.vnc_api_driver.vnc_api.VncApi")
+    def setUp(self, api):
         super(OpenContrailTestCases, self).setUp()
-        mech_driver.dm_integrator = mock.MagicMock()
-        mech_driver.subnet_dns_integrator = mock.MagicMock()
-        mech_driver.drv = mock.MagicMock()
-        self.drv = mech_driver.OpenContrailMechDriver()
-        self.drv.initialize()
-        self.drv.dm_integrator = mock.MagicMock(enabled=False)
-        self.drv.tf_client = mock.MagicMock()
+
+        # Base class validates configs, mock it after calling
+        with mock.patch("oslo_config.cfg.CONF"):
+            self.fake_api = mock.MagicMock()
+            mech_driver.dm_integrator = mock.MagicMock()
+            mech_driver.subnet_dns_integrator = mock.MagicMock()
+            mech_driver.drv = mock.MagicMock()
+            self.drv = mech_driver.OpenContrailMechDriver()
+            self.drv.initialize()
+            self.drv.dm_integrator = mock.MagicMock(enabled=False)
+            self.drv.tf_client = mock.MagicMock()
 
     def tearDown(self):
         super(OpenContrailTestCases, self).tearDown()

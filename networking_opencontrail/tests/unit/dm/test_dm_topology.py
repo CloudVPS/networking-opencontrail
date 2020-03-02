@@ -26,12 +26,15 @@ from networking_opencontrail.tests import base
 @ddt.ddt
 class DmTopologyApiTestCase(base.TestCase):
     @mock.patch("oslo_config.cfg.CONF")
-    def setUp(self, config):
+    @mock.patch(
+        "networking_opencontrail.drivers.vnc_api_driver.vnc_api.VncApi")
+    def setUp(self, api, config):
         super(DmTopologyApiTestCase, self).setUp()
 
-        self.tf_client = mock.Mock(spec_set=VncApiClient())
+        api.spec_set = VncApiClient
+        self.tf_client = api
 
-        self.dm_topology = DmTopologyApi(self.tf_client)
+        self.dm_topology = DmTopologyApi(api)
 
     def test_contains_host_true_when_in_api(self):
         self.tf_client.read_node_by_hostname = mock.Mock(

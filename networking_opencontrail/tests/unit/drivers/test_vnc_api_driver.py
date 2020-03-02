@@ -24,14 +24,13 @@ from networking_opencontrail.tests import base
 
 @ddt.ddt
 class VncApiDriverTestCase(base.TestCase):
-    @mock.patch("oslo_config.cfg.CONF",
-                APISERVER=mock.MagicMock(topology=None))
-    def setUp(self, config):
+    @mock.patch("oslo_config.cfg.CONF")
+    @mock.patch(
+        "networking_opencontrail.drivers.vnc_api_driver.vnc_api.VncApi")
+    def setUp(self, api, config):
         super(VncApiDriverTestCase, self).setUp()
-        self.vnc_api = mock.Mock()
-        vnc_api_driver.vnc_api.VncApi = mock.Mock(return_value=self.vnc_api)
-
         self.driver = vnc_api_driver.VncApiClient()
+        self.vnc_api = self.driver.vnc_lib
 
     def test_make_virtual_machine_interface(self):
         project = self._get_fake_project()
@@ -223,28 +222,6 @@ class VncApiDriverTestCase(base.TestCase):
 
         self.assertIsNone(obj)
         vnc_read.assert_called_with(id="uuid-1", fq_name=["name-1"])
-
-    @mock.patch("oslo_config.cfg.CONF")
-    def test_vnc_connect_decorator(self, config):
-        args = mock.Mock()
-        kwargs = mock.Mock()
-
-        class Test(object):
-            def __init__(self):
-                self.vnc_lib = None
-
-            @self.driver.vnc_connect
-            def test(self, arg, kwarg):
-                return (arg, kwarg)
-
-        test_obj = Test()
-        value1 = test_obj.test(args, kwarg=kwargs)
-        value2 = test_obj.test(args, kwarg=kwargs)
-
-        vnc_api_driver.vnc_api.VncApi.assert_called_once()
-        self.assertEqual(test_obj.vnc_lib, self.vnc_api)
-        self.assertEqual(value1, (args, kwargs))
-        self.assertEqual(value2, (args, kwargs))
 
     def _get_fake_project(self):
         return mock.Mock(uuid="proj-1", fq_name=["project-1"])
