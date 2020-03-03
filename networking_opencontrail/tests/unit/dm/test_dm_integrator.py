@@ -595,9 +595,6 @@ class DeviceManagerIntegratorTestCase(base.TestCase):
             return_value=binding)
         return binding
 
-    def _mock_bindings_helper_raise(self, exc):
-        self.bindings_helper.get_bindings_for_host = mock.Mock(side_effect=exc)
-
     def _mock_core_get_network(self, segmentation_id=100, net_type='vlan'):
         self.core_plugin.get_network = mock.Mock(
             return_value={'provider:segmentation_id': segmentation_id,

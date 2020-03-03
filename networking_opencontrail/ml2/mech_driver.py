@@ -52,9 +52,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
         self.tf_client = VncApiClient()
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
-    def create_network_precommit(self, context):
-        pass
-
     def create_network_postcommit(self, context):
         """Create a network in OpenContrail."""
         network = {'network': context.current}
@@ -62,9 +59,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
             self.drv.create_network(context._plugin_context, network)
         except Exception:
             LOG.exception("Create Network Failed")
-
-    def delete_network_precommit(self, context):
-        pass
 
     def delete_network_postcommit(self, context):
         """Delete a network from OpenContrail."""
@@ -74,9 +68,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
         except Exception:
             LOG.exception("Delete Network Failed")
 
-    def update_network_precommit(self, context):
-        pass
-
     def update_network_postcommit(self, context):
         """Update an existing network in OpenContrail."""
         network = {'network': context.current}
@@ -85,9 +76,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
                                     network['network']['id'], network)
         except Exception:
             LOG.exception("Update Network Failed")
-
-    def create_subnet_precommit(self, context):
-        pass
 
     def create_subnet_postcommit(self, context):
         """Create a subnet in OpenContrail."""
@@ -100,9 +88,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
         except Exception:
             LOG.exception("Create Subnet Failed")
 
-    def delete_subnet_precommit(self, context):
-        pass
-
     def delete_subnet_postcommit(self, context):
         """Delete a subnet from OpenContrail."""
         subnet = context.current
@@ -110,9 +95,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
             self.drv.delete_subnet(context._plugin_context, subnet['id'])
         except Exception:
             LOG.exception("Delete Subnet Failed")
-
-    def update_subnet_precommit(self, context):
-        pass
 
     def update_subnet_postcommit(self, context):
         """Update a subnet in OpenContrail."""
@@ -122,9 +104,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
                                    subnet['subnet']['id'], subnet)
         except Exception:
             LOG.exception("Update Subnet Failed")
-
-    def create_port_precommit(self, context):
-        pass
 
     def create_port_postcommit(self, context):
         """Create a port in OpenContrail."""
@@ -137,9 +116,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
             self.drv.create_port(context._plugin_context, port)
         except Exception:
             LOG.exception("Create Port Failed")
-
-    def update_port_precommit(self, context):
-        pass
 
     def update_port_postcommit(self, context):
         """Update a port in OpenContrail."""
@@ -156,9 +132,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
                     context._plugin_context, context.current, context.original)
         except Exception:
             LOG.exception("Update port Failed")
-
-    def delete_port_precommit(self, context):
-        pass
 
     def delete_port_postcommit(self, context):
         """Delete a port from OpenContrail."""

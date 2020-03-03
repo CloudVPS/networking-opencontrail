@@ -201,9 +201,6 @@ class DmBindingsHelperTestCase(base.TestCase):
         node = {'name': 'compute1', 'ports': [switch_port_1, switch_port_2]}
         self.dm_topology.get_node.return_value = node
 
-    def _mock_get_node_none(self):
-        self.dm_topology.get_node.return_value = None
-
     def _mock_tf_client_when_no_vpg(self):
         self._mock_tf_client_physical_interface(vpg_refs=None)
 
