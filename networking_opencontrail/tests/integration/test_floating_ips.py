@@ -12,6 +12,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
+import unittest2 as unittest
 import uuid
 
 from networking_opencontrail.tests.base import IntegrationTestCase
@@ -47,6 +49,8 @@ class TestFloatingIPs(IntegrationTestCase):
         }
         self.test_subnet = self.q_create_subnet(**sub)
 
+    @unittest.skip(
+        'Will be added after migrating floating ip functionality to vnc_api')
     def test_create_floatingip(self):
 
         fip = {
@@ -79,6 +83,8 @@ class TestFloatingIPs(IntegrationTestCase):
 
         self.assertDictEqual(expected, contrail_dict)
 
+    @unittest.skip(
+        'Will be added after migrating floating ip functionality to vnc_api')
     def test_delete_floatingip(self):
 
         fip = {
@@ -97,6 +103,8 @@ class TestFloatingIPs(IntegrationTestCase):
             'floating-ip', q_fip['floatingip']['id'])
         self.assertEqual(req.status_code, 404)
 
+    @unittest.skip(
+        'Will be added after migrating floating ip functionality to vnc_api')
     def test_update_floatingip(self):
         """Update port association of floating ip
 

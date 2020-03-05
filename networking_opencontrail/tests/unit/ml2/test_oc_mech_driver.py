@@ -15,6 +15,7 @@
 
 
 import mock
+import uuid
 
 from neutron.tests.unit import testlib_api
 
@@ -47,64 +48,6 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def tearDown(self):
         super(OpenContrailTestCases, self).tearDown()
 
-    def test_create_network(self):
-        network_id = 'test_net1'
-        tenant_id = 'ten-1'
-
-        net_context, network = self.get_network_context(tenant_id, network_id)
-        self.drv.create_network_postcommit(net_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().create_network(
-                net_context._plugin_context, network)
-        ]
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-
-    def test_delete_network(self):
-        network_id = 'test_net1'
-        tenant_id = 'ten-1'
-
-        net_context, network = self.get_network_context(tenant_id, network_id)
-        self.drv.delete_network_postcommit(net_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().delete_network(
-                net_context._plugin_context, network_id)
-        ]
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-
-    def test_update_network(self):
-        network_id = 'test_net1'
-        tenant_id = 'ten-1'
-        net_name = 'name-1'
-
-        net_context, network = self.get_network_context(tenant_id,
-                                                        network_id,
-                                                        net_name=net_name)
-        self.drv.create_network_postcommit(net_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().create_network(
-                net_context._plugin_context, network)
-        ]
-        # Change the name of the network
-        net_name = 'name-2'
-        net_context, network = self.get_network_context(tenant_id,
-                                                        network_id,
-                                                        net_name=net_name)
-        self.drv.update_network_postcommit(net_context)
-
-        expected_calls.append(
-            mock.call.OpenContrailDrivers().update_network(
-                net_context._plugin_context, network_id, network))
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-
     def test_create_subnet(self):
         network_id = 'test_net1'
         tenant_id = 'ten-1'
@@ -135,7 +78,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
     def test_delete_subnet(self):
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         subnet_id = 'sub-1'
 
         subnet_context, subnet = self.get_subnet_context(tenant_id, network_id,
@@ -152,7 +95,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
     def test_update_subnet(self):
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         subnet_id = 'sub-1'
         subnet_name = 'test-sub-1'
 
@@ -182,7 +125,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
     def test_create_port(self):
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         port_id = 'port-1'
 
         port_context, port = self.get_port_context(tenant_id, network_id,
@@ -199,7 +142,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
     def test_delete_port(self):
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         port_id = 'port-1'
 
         port_context, port = self.get_port_context(tenant_id, network_id,
@@ -217,7 +160,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def test_delete_port_when_dm_enabled(self):
         self.drv.dm_integrator.enabled = True
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         port_id = 'port-1'
 
         port_context, port = self.get_port_context(tenant_id, network_id,
@@ -236,7 +179,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
     def test_update_port(self):
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         port_id = 'port-1'
         port_name = 'first-port'
 
@@ -266,7 +209,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def test_update_port_when_dm_enabled(self):
         self.drv.dm_integrator.enabled = True
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         port_id = 'port-1'
         port_name = 'first-port'
 
@@ -298,7 +241,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
     def test_create_port_omit_callback(self):
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         port_id = 'port-1'
         owner = mech_driver.OMIT_DEVICES_TYPES[0]
 
@@ -322,7 +265,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
     def test_update_port_omit_callback(self):
         network_id = 'test_net1'
-        tenant_id = 'ten-1'
+        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
         port_id = 'port-1'
         owner = mech_driver.OMIT_DEVICES_TYPES[0]
 

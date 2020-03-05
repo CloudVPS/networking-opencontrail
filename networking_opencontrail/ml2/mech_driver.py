@@ -24,6 +24,7 @@ from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.l3 import snat_synchronizer
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail.ml2 import subnet_dns_integrator
+from networking_opencontrail import repository
 
 
 LOG = logging.getLogger(__name__)
@@ -49,6 +50,11 @@ class OpenContrailMechDriver(api.MechanismDriver):
         tf_client = VncApiClient()
         tf_driver = drv.OpenContrailDrivers()
 
+        try:
+            repository.connect()
+        except Exception as e:
+            LOG.warning("Exception: %s", str(e))
+
         self.tf_client = tf_client
         self.drv = tf_driver
         self.dm_integrator = dm_integrator.DeviceManagerIntegrator(tf_client)
@@ -61,28 +67,20 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
     def create_network_postcommit(self, context):
         """Create a network in OpenContrail."""
-        network = {'network': context.current}
-        try:
-            self.drv.create_network(context._plugin_context, network)
-        except Exception:
-            LOG.exception("Create Network Failed")
+        q_network = context.current
+        repository.network.create(q_network=q_network)
 
     def delete_network_postcommit(self, context):
         """Delete a network from OpenContrail."""
-        network = context.current
-        try:
-            self.drv.delete_network(context._plugin_context, network['id'])
-        except Exception:
-            LOG.exception("Delete Network Failed")
+        q_network = context.current
+        repository.network.delete(q_network=q_network)
 
     def update_network_postcommit(self, context):
         """Update an existing network in OpenContrail."""
-        network = {'network': context.current}
-        try:
-            self.drv.update_network(context._plugin_context,
-                                    network['network']['id'], network)
-        except Exception:
-            LOG.exception("Update Network Failed")
+        q_network = context.current
+        old_q_network = context.original
+        repository.network.update(old_q_network=old_q_network,
+                                  q_network=q_network)
 
     def create_subnet_postcommit(self, context):
         """Create a subnet in OpenContrail."""

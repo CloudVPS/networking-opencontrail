@@ -17,82 +17,47 @@ from networking_opencontrail.tests.base import IntegrationTestCase
 
 class TestManageNetwork(IntegrationTestCase):
 
-    def test_create_network_local(self):
-        net = {
-            'name': 'test_local_network',
-            'provider:network_type': 'local',
-            'admin_state_up': True,
-        }
-        q_net = self.q_create_network(**net)
-        tf_net = self.tf_get_resource('virtual-network',
-                                      q_net['network']['id'])
-
-        self.assertIsNone(tf_net.get('provider_properties'))
-
     def test_create_network_vlan(self):
-        net = {
+        network_schema = {
             'name': 'test_vlan_network',
             'provider:network_type': 'vlan',
             'provider:physical_network': 'public',
-            'admin_state_up': True,
         }
-        q_net = self.q_create_network(**net)
-        tf_net = self.tf_get_resource('virtual-network',
-                                      q_net['network']['id'])
+        wrapped_q_network = self.q_create_network(**network_schema)
+        q_network = wrapped_q_network['network']
 
-        self.assertIsNotNone(tf_net.get('provider_properties'))
-        self.assertEqual(tf_net['provider_properties']['physical_network'],
-                         q_net['network']['provider:physical_network'])
-        self.assertIsNotNone(tf_net['provider_properties']['segmentation_id'])
+        network = self.tf_get_resource('virtual-network', q_network['id'])
+
+        self.assertEqual(network['name'], q_network['name'])
+        self.assertEqual(network['uuid'], q_network['id'])
 
     def test_update_network_vlan(self):
-        net = {
-            'name': 'test_vlan_network',
+        network_schema = {
+            'name': 'old_name',
             'provider:network_type': 'vlan',
             'provider:physical_network': 'public',
-            'admin_state_up': True,
-        }
-        q_network = self.q_create_network(**net)
 
-        NEW_NETWORK_NAME = 'new_network_name'
-        changed_fields = {
-            'name': NEW_NETWORK_NAME,
         }
-        q_network = self.q_update_network(q_network, **changed_fields)
-        tf_network = self.tf_get_resource('virtual-network',
-                                          q_network['network']['id'])
-        self.assertEqual(tf_network['display_name'], NEW_NETWORK_NAME)
+        wrapped_q_network = self.q_create_network(**network_schema)
 
-    def test_create_network_vlan_with_seg_id(self):
-        net = {
-            'name': 'test_vlan_10_network',
-            'provider:network_type': 'vlan',
-            'provider:physical_network': 'public',
-            'provider:segmentation_id': 10,
-            'admin_state_up': True,
-        }
-        q_net = self.q_create_network(**net)
-        tf_net = self.tf_get_resource('virtual-network',
-                                      q_net['network']['id'])
+        new_name = 'new_name'
+        wrapped_q_network = self.q_update_network(wrapped_q_network,
+                                                  name=new_name)
 
-        expected_provider_props = {
-            'segmentation_id': q_net['network']['provider:segmentation_id'],
-            'physical_network': q_net['network']['provider:physical_network']
-        }
-        self.assertIsNotNone(tf_net.get('provider_properties'))
-        self.assertDictEqual(tf_net['provider_properties'],
-                             expected_provider_props)
+        network = self.tf_get_resource('virtual-network',
+                                       wrapped_q_network['network']['id'])
+        self.assertEqual(network['display_name'], new_name)
+        self.assertEqual(network['name'], network_schema['name'])
 
     def test_delete_network_vlan(self):
-        net = {
+        network_schema = {
             'name': 'test_vlan_network',
             'provider:network_type': 'vlan',
             'provider:physical_network': 'public',
-            'admin_state_up': True,
         }
-        q_net = self.q_create_network(**net)
-        network_id = q_net['network']['id']
-        self.q_delete_network(q_net)
+        wrapped_q_network = self.q_create_network(**network_schema)
+        q_network = wrapped_q_network['network']
+        self.q_delete_network(wrapped_q_network)
 
-        response = self.tf_request_resource('virtual-network', network_id)
+        response = self.tf_request_resource('virtual-network', q_network['id'])
         self.assertEqual(response.status_code, 404)

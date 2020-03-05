@@ -15,6 +15,7 @@
 
 
 import mock
+import uuid
 
 from neutron_lib.callbacks import events
 from neutron_lib.callbacks import resources
@@ -222,7 +223,7 @@ class SubnetDNSCompatibilityIntegratorTestCase(testlib_api.SqlTestCase):
                          dns_address='10.10.10.2'):
         subnet = {'id': sub_id,
                   'network_id': 'test_net-1',
-                  'tenant_id': 'ten-1',
+                  'tenant_id': uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'),
                   'name': sub_name,
                   'dns_server_address': dns_address}
         return subnet
