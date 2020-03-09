@@ -25,6 +25,7 @@ from networking_opencontrail.l3 import snat_synchronizer
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail.ml2 import subnet_dns_integrator
 from networking_opencontrail import repository
+from networking_opencontrail.sync import synchronizer
 
 
 LOG = logging.getLogger(__name__)
@@ -220,6 +221,11 @@ class OpenContrailMechDriver(api.MechanismDriver):
             self.drv.delete_security_group_rule(context, sgr_id)
         except Exception:
             LOG.exception('Failed to delete Security Group rule %s' % sgr_id)
+
+    def get_workers(self):
+        return [
+            synchronizer.TFSynchronizer(self.drv, OMIT_DEVICES_TYPES)
+        ]
 
     def _is_callback_to_omit(self, device_owner):
         # Operation on port should be not propagated to TungstenFabric when:
