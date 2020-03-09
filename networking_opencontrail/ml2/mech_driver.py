@@ -18,11 +18,13 @@ from oslo_log import log as logging
 import networking_opencontrail.drivers.drv_opencontrail as drv
 from neutron_lib.plugins.ml2 import api
 
+from networking_opencontrail.common import utils
 from networking_opencontrail.dm import dm_integrator
 from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.l3 import snat_synchronizer
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail.ml2 import subnet_dns_integrator
+
 
 LOG = logging.getLogger(__name__)
 OMIT_DEVICES_TYPES = [
@@ -43,6 +45,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
     """
 
     def initialize(self):
+        utils.register_vnc_api_options()
         tf_client = VncApiClient()
         tf_driver = drv.OpenContrailDrivers()
 

@@ -26,7 +26,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from networking_opencontrail.common import exceptions
-from networking_opencontrail.common import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -61,7 +60,6 @@ class OpenContrailDriversBase(object):
 
     def __init__(self):
         super(OpenContrailDriversBase, self).__init__()
-        utils.register_vnc_api_options()
 
     def _create_resource(self, res_type, context, res_data):
         pass
