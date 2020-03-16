@@ -52,7 +52,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         tf_driver = drv.OpenContrailDrivers()
 
         try:
-            repository.connect()
+            repository.initialize()
         except Exception as e:
             LOG.warning("Exception: %s", str(e))
 

@@ -13,17 +13,12 @@
 #    under the License.
 #
 
-import uuid
-
-from oslo_log import log as logging
-
+from networking_opencontrail.common.utils import register_vnc_api_options
 from networking_opencontrail.repository.client import tf_client
+from networking_opencontrail.repository.tag import ml2_tag_manager
 
 
-LOG = logging.getLogger(__name__)
-
-
-def fetch_project(q_object):
-    project_id = str(uuid.UUID(q_object['tenant_id']))
-    project = tf_client.read_project(uuid=project_id)
-    return project
+def initialize():
+    register_vnc_api_options()
+    tf_client.connect()
+    ml2_tag_manager.initialize()

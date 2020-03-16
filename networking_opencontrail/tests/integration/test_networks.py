@@ -12,6 +12,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
+from networking_opencontrail.repository import ml2_tag_manager
 from networking_opencontrail.tests.base import IntegrationTestCase
 
 
@@ -61,3 +63,34 @@ class TestManageNetwork(IntegrationTestCase):
 
         response = self.tf_request_resource('virtual-network', q_network['id'])
         self.assertEqual(response.status_code, 404)
+
+    def test_created_network_is_tagged(self):
+        network_schema = {
+            'name': 'test_vlan_network',
+            'provider:network_type': 'vlan',
+            'provider:physical_network': 'public',
+        }
+        wrapped_q_network = self.q_create_network(**network_schema)
+        q_network = wrapped_q_network['network']
+
+        network = self.tf_get_resource('virtual-network', q_network['id'])
+        network_tag_fq_name = network['tag_refs'][0]['to']
+        self.assertEqual(network_tag_fq_name, ml2_tag_manager.FQ_NAME)
+
+    def test_updated_network_is_tagged(self):
+        network_schema = {
+            'name': 'old_name',
+            'provider:network_type': 'vlan',
+            'provider:physical_network': 'public',
+
+        }
+        wrapped_q_network = self.q_create_network(**network_schema)
+
+        new_name = 'new_name'
+        wrapped_q_network = self.q_update_network(wrapped_q_network,
+                                                  name=new_name)
+
+        network = self.tf_get_resource('virtual-network',
+                                       wrapped_q_network['network']['id'])
+        network_tag_fq_name = network['tag_refs'][0]['to']
+        self.assertEqual(network_tag_fq_name, ml2_tag_manager.FQ_NAME)

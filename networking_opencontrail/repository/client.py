@@ -59,9 +59,22 @@ class TFClient(object):
 
         cls.session = session
 
-    def read_project(self, project_id=None, fq_name=None):
-        project = self.session.project_read(id=project_id, fq_name=fq_name)
-        return project
+    def read_project(self, uuid=None, fq_name=None):
+        try:
+            project = self.session.project_read(id=uuid, fq_name=fq_name)
+            return project
+        except vnc_api.NoIdError:
+            return None
+
+    def create_tag(self, tag):
+        self.session.tag_create(tag)
+
+    def read_tag(self, uuid=None, fq_name=None):
+        try:
+            tag = self.session.tag_read(id=uuid, fq_name=fq_name)
+            return tag
+        except vnc_api.NoIdError:
+            return None
 
     def create_network(self, network):
         self.session.virtual_network_create(network)

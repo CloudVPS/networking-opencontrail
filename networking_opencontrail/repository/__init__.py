@@ -13,12 +13,10 @@
 #    under the License.
 #
 
-from networking_opencontrail.repository import client
+from networking_opencontrail.repository.client import tf_client
+from networking_opencontrail.repository.initialize import initialize
 from networking_opencontrail.repository import network
+from networking_opencontrail.repository.tag import ml2_tag_manager
 
 
-__all__ = ['client', 'network', 'connect']
-
-
-def connect():
-    client.tf_client.connect()
+__all__ = ['initialize', 'network', 'tf_client', 'ml2_tag_manager']
