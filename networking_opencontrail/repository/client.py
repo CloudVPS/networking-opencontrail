@@ -76,6 +76,15 @@ class TFClient(object):
         except vnc_api.NoIdError:
             return None
 
+    def list_networks(self):
+        return self.session.virtual_networks_list(detail=True)
+
+    def read_network(self, network_id):
+        try:
+            return self.session.virtual_network_read(id=network_id)
+        except vnc_api.NoIdError:
+            return None
+
     def create_network(self, network):
         self.session.virtual_network_create(network)
 

@@ -49,5 +49,9 @@ class Ml2TagManager(object):
     def tag(self, obj):
         return obj.add_tag(self.ml2_tag)
 
+    def check(self, obj):
+        tag_refs = obj.get_tag_refs() or ()
+        tag_fq_names = [ref['to'] for ref in tag_refs]
+        return self.FQ_NAME in tag_fq_names
 
 ml2_tag_manager = Ml2TagManager()

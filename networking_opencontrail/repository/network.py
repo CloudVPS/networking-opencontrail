@@ -24,6 +24,10 @@ from networking_opencontrail import resources
 LOG = logging.getLogger(__name__)
 
 
+def list_all():
+    return tf_client.list_networks()
+
+
 def create(q_network):
     project = fetch_project(q_network)
     network = resources.network.create(q_network=q_network,
