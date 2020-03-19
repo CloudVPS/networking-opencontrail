@@ -48,7 +48,7 @@ class TestSubnets(IntegrationTestCase):
         expected = {
             'name': q_subnet['subnet']['name'],
             'network_id': q_subnet['subnet']['network_id'],
-            'cdir': q_subnet['subnet']['cidr'],
+            'cidr': q_subnet['subnet']['cidr'],
             'gateway_ip': q_subnet['subnet']['gateway_ip'],
             'allocation_pools': q_subnet['subnet']['allocation_pools'],
             'id': q_subnet['subnet']['id'],
@@ -57,23 +57,24 @@ class TestSubnets(IntegrationTestCase):
         sub = self._get_subnet_from_network(q_subnet['subnet']['id'],
                                             self.test_network['network']['id'])
 
-        tf_network = self.tf_get_resource('virtual-network',
-                                          self.test_network['network']['id'])
+        tf_network = self.tf_get('virtual-network',
+                                 self.test_network['network']['id'])
 
         self.assertIsNotNone(sub)
 
-        sub_ip = sub.get('subnet', {})
+        sub_ip = sub.get_subnet()
         contrail_dict = {
-            'name': sub.get('subnet_name'),
-            'network_id': tf_network.get('uuid'),
-            'cdir': '/'.join([sub_ip.get('ip_prefix', ''),
-                              str(sub_ip.get('ip_prefix_len', ''))]),
-            'gateway_ip': sub.get('default_gateway'),
-            'allocation_pools': sub.get('allocation_pools'),
-            'id': sub.get('subnet_uuid'),
+            'name': sub.get_subnet_name(),
+            'network_id': tf_network.get_uuid(),
+            'cidr': '/'.join([sub_ip.get_ip_prefix() or '',
+                              str(sub_ip.get_ip_prefix_len() or '')]),
+            'gateway_ip': sub.get_default_gateway(),
+            'allocation_pools': [
+                {"start": pool.get_start(), "end": pool.get_end()}
+                for pool in sub.get_allocation_pools() or ()
+            ],
+            'id': sub.get_subnet_uuid(),
         }
-        for pool in contrail_dict['allocation_pools']:
-            pool.pop('vrouter_specific_pool')
 
         self.assertDictEqual(expected, contrail_dict)
 
@@ -124,21 +125,22 @@ class TestSubnets(IntegrationTestCase):
         sub = self._get_subnet_from_network(q_subnet['subnet']['id'],
                                             self.test_network['network']['id'])
 
-        tf_network = self.tf_get_resource('virtual-network',
-                                          self.test_network['network']['id'])
+        tf_network = self.tf_get('virtual-network',
+                                 self.test_network['network']['id'])
 
-        sub_ip = sub.get('subnet')
+        sub_ip = sub.get_subnet()
         s = {
-            'name': sub.get('subnet_name'),
-            'network_id': tf_network.get('uuid'),
-            'cdir': '/'.join([sub_ip.get('ip_prefix', ''),
-                              str(sub_ip.get('ip_prefix_len', ''))]),
-            'gateway_ip': sub.get('default_gateway'),
-            'allocation_pools': sub.get('allocation_pools'),
-            'id': sub.get('subnet_uuid'),
+            'name': sub.get_subnet_name(),
+            'network_id': tf_network.get_uuid(),
+            'cidr': '/'.join([sub_ip.get_ip_prefix() or '',
+                              str(sub_ip.get_ip_prefix_len() or '')]),
+            'gateway_ip': sub.get_default_gateway(),
+            'allocation_pools': [
+                {"start": pool.get_start(), "end": pool.get_end()}
+                for pool in sub.get_allocation_pools() or ()
+            ],
+            'id': sub.get_subnet_uuid(),
         }
-        for pool in s['allocation_pools']:
-            pool.pop('vrouter_specific_pool')
 
         self.assertDictEqual(expected, s)
 
@@ -169,14 +171,14 @@ class TestSubnets(IntegrationTestCase):
         self.assertIsNone(sub)
 
     def _get_subnet_from_network(self, subnet_id, network_id):
-        tf_network = self.tf_get_resource('virtual-network', network_id)
-        ipam_refs = tf_network.get('network_ipam_refs')
+        tf_network = self.tf_get('virtual-network', network_id)
+        ipam_refs = tf_network.get_network_ipam_refs()
 
         self.assertIsNotNone(ipam_refs)
 
         for ref in ipam_refs:
-            subnets = ref.get('attr', {}).get('ipam_subnets', [])
+            subnets = ref.get('attr').ipam_subnets or ()
             for sub in subnets:
-                if uuid.UUID(subnet_id) == uuid.UUID(sub.get('subnet_uuid')):
+                if uuid.UUID(subnet_id) == uuid.UUID(sub.get_subnet_uuid()):
                     return sub
         return None

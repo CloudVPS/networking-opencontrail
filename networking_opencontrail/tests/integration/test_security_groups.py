@@ -12,7 +12,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import requests
 import unittest2 as unittest
 import uuid
 
@@ -39,8 +38,8 @@ class TestSecurityGroups(IntegrationTestCase):
             'name': q_security_group['security_group'].get('name')
         }
         contrail_dict = {
-            'id': uuid.UUID(tf_security_group.get('uuid')),
-            'name': tf_security_group.get('name')
+            'id': uuid.UUID(tf_security_group.get_uuid()),
+            'name': tf_security_group.name,
         }
 
         self.assertDictEqual(expected, contrail_dict)
@@ -70,8 +69,8 @@ class TestSecurityGroups(IntegrationTestCase):
         }
         # tf field `name` does not change; instead, `display_name` is updated
         contrail_dict = {
-            'id': uuid.UUID(tf_security_group.get('uuid')),
-            'name': tf_security_group.get('display_name'),
+            'id': uuid.UUID(tf_security_group.get_uuid()),
+            'name': tf_security_group.get_display_name(),
         }
         self.assertDictEqual(expected, contrail_dict)
 
@@ -86,12 +85,9 @@ class TestSecurityGroups(IntegrationTestCase):
         self.q_delete_security_group(q_security_group)
 
         # THEN
-        response = self.tf_request_resource('security-group',
-                                            security_group_id)
-        self.assertEqual(
-            response.status_code,
-            requests.status_codes.codes['not_found']
-        )
+        tf_security_group = self.tf_get('security-group',
+                                        security_group_id)
+        self.assertIsNone(tf_security_group)
 
     @unittest.skip("Default rules have unsynchronized IDs")
     def test_create_rules_upon_security_group_creation(self):
@@ -106,7 +102,7 @@ class TestSecurityGroups(IntegrationTestCase):
         q_sg_rules = self._q_extract_sg_rules(q_security_group)
         q_sg_rule_ids = [rule['id'] for rule in q_sg_rules]
         tf_sg_rules = self._tf_extract_sg_rules(tf_security_group)
-        tf_sg_rule_ids = [rule['rule_uuid'] for rule in tf_sg_rules]
+        tf_sg_rule_ids = [rule.get_rule_uuid() for rule in tf_sg_rules]
 
         expected_rule_ids = set(q_sg_rule_ids)
         tf_actual_rule_ids = set(tf_sg_rule_ids)
@@ -144,12 +140,12 @@ class TestSecurityGroups(IntegrationTestCase):
             rule
             for rule
             in updated_tf_sg_rules
-            if rule['rule_uuid'] == new_rule_id
+            if rule.get_rule_uuid() == new_rule_id
         ][0]
 
         expected_parameters = (some_protocol, some_ethertype)
         tf_new_rule_parameters = \
-            (tf_new_rule['protocol'], tf_new_rule['ethertype'])
+            (tf_new_rule.get_protocol(), tf_new_rule.get_ethertype())
         self.assertEqual(expected_parameters, tf_new_rule_parameters)
 
     def test_delete_security_group_rule(self):
@@ -206,7 +202,7 @@ class TestSecurityGroups(IntegrationTestCase):
 
     def _tf_sg_rule_ids(self, security_group_id):
         tf_sg_rules = self._tf_sg_rules(security_group_id)
-        tf_rule_ids = [rule['rule_uuid'] for rule in tf_sg_rules]
+        tf_rule_ids = [rule.get_rule_uuid() for rule in tf_sg_rules]
         return tf_rule_ids
 
     def _tf_sg_rules(self, security_group_id):
@@ -214,7 +210,7 @@ class TestSecurityGroups(IntegrationTestCase):
         return self._tf_extract_sg_rules(tf_security_group)
 
     def _tf_get_security_group(self, security_group_id):
-        return self.tf_get_resource(
+        return self.tf_get(
             'security-group',
             security_group_id
         )
@@ -225,4 +221,4 @@ class TestSecurityGroups(IntegrationTestCase):
 
     @staticmethod
     def _tf_extract_sg_rules(tf_security_group):
-        return tf_security_group['security_group_entries']['policy_rule']
+        return tf_security_group.get_security_group_entries().get_policy_rule()

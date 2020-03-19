@@ -44,15 +44,15 @@ class TestPorts(IntegrationTestCase):
                 q_port['port'].get('port_security_enabled'),
         }
 
-        tf_port = self.tf_get_resource('virtual-machine-interface',
-                                       q_port['port']['id'])
+        tf_port = self.tf_get('virtual-machine-interface',
+                              q_port['port']['id'])
         self.assertIsNotNone(tf_port)
 
         contrail_dict = {
-            'id': uuid.UUID(tf_port.get('uuid')),
-            'name': tf_port.get('name'),
+            'id': uuid.UUID(tf_port.get_uuid()),
+            'name': tf_port.name,
             'port_security_enabled':
-                tf_port.get('port_security_enabled'),
+                tf_port.get_port_security_enabled(),
         }
 
         self.assertDictEqual(expected, contrail_dict)
@@ -66,8 +66,8 @@ class TestPorts(IntegrationTestCase):
 
         q_port = self.q_create_port(**port)
 
-        tf_port = self.tf_get_resource('virtual-machine-interface',
-                                       q_port['port']['id'])
+        tf_port = self.tf_get('virtual-machine-interface',
+                              q_port['port']['id'])
         self.assertIsNotNone(tf_port)
 
         changed_fields = {
@@ -83,13 +83,13 @@ class TestPorts(IntegrationTestCase):
                 q_port['port'].get('port_security_enabled'),
         }
 
-        tf_port = self.tf_get_resource(
+        tf_port = self.tf_get(
             'virtual-machine-interface', q_port['port']['id'])
 
         contrail_dict = {
-            'id': uuid.UUID(tf_port.get('uuid')),
-            'name': tf_port.get('name'),
-            'port_security_enabled': tf_port.get('port_security_enabled'),
+            'id': uuid.UUID(tf_port.get_uuid()),
+            'name': tf_port.name,
+            'port_security_enabled': tf_port.get_port_security_enabled(),
         }
 
         self.assertDictEqual(expected, contrail_dict)
@@ -101,14 +101,13 @@ class TestPorts(IntegrationTestCase):
         }
 
         q_port = self.q_create_port(**port)
-        tf_port = self.tf_get_resource('virtual-machine-interface',
-                                       q_port['port']['id'])
+        tf_port = self.tf_get('virtual-machine-interface',
+                              q_port['port']['id'])
 
         self.assertIsNotNone(tf_port)
 
         self.q_delete_port(q_port)
 
-        req = self.tf_request_resource('virtual-machine-interface',
-                                       q_port['port']['id'])
-
-        self.assertEqual(req.status_code, 404)
+        tf_port = self.tf_get('virtual-machine-interface',
+                              q_port['port']['id'])
+        self.assertIsNone(tf_port)

@@ -28,10 +28,10 @@ class TestManageNetwork(IntegrationTestCase):
         wrapped_q_network = self.q_create_network(**network_schema)
         q_network = wrapped_q_network['network']
 
-        network = self.tf_get_resource('virtual-network', q_network['id'])
+        network = self.tf_get('virtual-network', q_network['id'])
 
-        self.assertEqual(network['name'], q_network['name'])
-        self.assertEqual(network['uuid'], q_network['id'])
+        self.assertEqual(network.name, q_network['name'])
+        self.assertEqual(network.get_uuid(), q_network['id'])
 
     def test_update_network_vlan(self):
         network_schema = {
@@ -46,10 +46,10 @@ class TestManageNetwork(IntegrationTestCase):
         wrapped_q_network = self.q_update_network(wrapped_q_network,
                                                   name=new_name)
 
-        network = self.tf_get_resource('virtual-network',
-                                       wrapped_q_network['network']['id'])
-        self.assertEqual(network['display_name'], new_name)
-        self.assertEqual(network['name'], network_schema['name'])
+        network = self.tf_get('virtual-network',
+                              wrapped_q_network['network']['id'])
+        self.assertEqual(network.get_display_name(), new_name)
+        self.assertEqual(network.name, network_schema['name'])
 
     def test_delete_network_vlan(self):
         network_schema = {
@@ -61,8 +61,8 @@ class TestManageNetwork(IntegrationTestCase):
         q_network = wrapped_q_network['network']
         self.q_delete_network(wrapped_q_network)
 
-        response = self.tf_request_resource('virtual-network', q_network['id'])
-        self.assertEqual(response.status_code, 404)
+        tf_network = self.tf_get('virtual-network', q_network['id'])
+        self.assertIsNone(tf_network)
 
     def test_created_network_is_tagged(self):
         network_schema = {
@@ -73,8 +73,8 @@ class TestManageNetwork(IntegrationTestCase):
         wrapped_q_network = self.q_create_network(**network_schema)
         q_network = wrapped_q_network['network']
 
-        network = self.tf_get_resource('virtual-network', q_network['id'])
-        network_tag_fq_name = network['tag_refs'][0]['to']
+        network = self.tf_get('virtual-network', q_network['id'])
+        network_tag_fq_name = network.get_tag_refs()[0]['to']
         self.assertEqual(network_tag_fq_name, ml2_tag_manager.FQ_NAME)
 
     def test_updated_network_is_tagged(self):
@@ -90,7 +90,7 @@ class TestManageNetwork(IntegrationTestCase):
         wrapped_q_network = self.q_update_network(wrapped_q_network,
                                                   name=new_name)
 
-        network = self.tf_get_resource('virtual-network',
-                                       wrapped_q_network['network']['id'])
-        network_tag_fq_name = network['tag_refs'][0]['to']
+        network = self.tf_get('virtual-network',
+                              wrapped_q_network['network']['id'])
+        network_tag_fq_name = network.get_tag_refs()[0]['to']
         self.assertEqual(network_tag_fq_name, ml2_tag_manager.FQ_NAME)

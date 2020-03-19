@@ -31,18 +31,15 @@ class TestNetworkSynchronization(IntegrationTestCase):
             'admin_state_up': True,
         }
         q_net = self.q_create_network(**net)
-        self.tf_delete_resource('virtual-network', q_net['network']['id'])
+        self.tf_delete('virtual-network', q_net['network']['id'])
 
-        tf_net = self._get_recreated_resource('virtual-network',
-                                              q_net['network']['id'])
-
-        self.assertIsNotNone(tf_net.get('provider_properties'))
-        self.assertEqual(tf_net['provider_properties']['physical_network'],
-                         q_net['network']['provider:physical_network'])
-        self.assertIsNotNone(tf_net['provider_properties']['segmentation_id'])
+        self.assertIsNotNone(
+            self._get_recreated_resource('virtual-network',
+                                         q_net['network']['id'])
+        )
 
     @retry(retry_on_result=retry_if_none,
            wait_fixed=1000,
            stop_max_delay=10000)
     def _get_recreated_resource(self, res_type, res_id):
-        return self.tf_get_resource(res_type, res_id)
+        return self.tf_get(res_type, res_id)

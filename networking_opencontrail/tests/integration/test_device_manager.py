@@ -103,8 +103,8 @@ class TestDeviceManager(IntegrationTestCase):
                                 self.vlan_id,
                                 physical_interfaces)
 
-            vmi = self.tf_get_resource('virtual-machine-interface', vmi_uuid)
-            vpg_uuids.add(vmi['virtual_port_group_back_refs'][0]['uuid'])
+            vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
+            vpg_uuids.add(vmi.get_virtual_port_group_back_refs()[0]['uuid'])
 
         self.assertEqual(2, len(vpg_uuids))
 
@@ -186,8 +186,8 @@ class TestDeviceManager(IntegrationTestCase):
                             self.vlan_id,
                             [('qfx-test-1', 'xe-0/0/0')])
 
-        vmi = self.tf_get_resource('virtual-machine-interface', vmi_uuid)
-        vpg_uuid = vmi['virtual_port_group_back_refs'][0]['uuid']
+        vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
+        vpg_uuid = vmi.get_virtual_port_group_back_refs()[0]['uuid']
 
         self.q_update_port(q_port, **change)
 
@@ -206,8 +206,8 @@ class TestDeviceManager(IntegrationTestCase):
         vmi_uuid = self._find_vmi(vmi_name)
         self.assertIsNotNone(vmi_uuid)
 
-        vmi = self.tf_get_resource('virtual-machine-interface', vmi_uuid)
-        vpg_uuid = vmi['virtual_port_group_back_refs'][0]['uuid']
+        vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
+        vpg_uuid = vmi.get_virtual_port_group_back_refs()[0]['uuid']
 
         self.q_delete_port(port)
 
@@ -267,32 +267,31 @@ class TestDeviceManager(IntegrationTestCase):
                                 [('qfx-test-1', 'xe-0/0/0')])
             vmi_uuids.append(vmi_uuid)
 
-            vmi = self.tf_get_resource('virtual-machine-interface', vmi_uuid)
-            vpg_uuids.add(vmi['virtual_port_group_back_refs'][0]['uuid'])
+            vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
+            vpg_uuids.add(vmi.get_virtual_port_group_back_refs()[0]['uuid'])
 
         self.assertEqual(1, len(vpg_uuids))
 
         self.q_delete_port(q_port_2)
         self.q_delete_port(q_port_3)
 
-        vpg = self.tf_get_resource('virtual-port-group', vpg_uuids.pop())
+        vpg = self.tf_get('virtual-port-group', vpg_uuids.pop())
         self.assertTrue(self._check_vpg_contains_vmi_ref(vpg, vmi_uuids[0]))
         self.assertFalse(self._check_vpg_contains_vmi_ref(vpg, vmi_uuids[1]))
 
-        ret = self.tf_request_resource('virtual-machine-interface',
-                                       vmi_uuids[1])
-        self.assertEqual(404, ret.status_code)
+        vmi = self.tf_get('virtual-machine-interface', vmi_uuids[1])
+        self.assertIsNone(vmi)
 
     def _find_vmi(self, vmi_name):
-        vmis = self.tf_list_resource('virtual-machine-interface')
+        vmis = self.tf_list('virtual-machine-interface')
         return next((vmi['uuid'] for vmi in vmis
                      if vmi['fq_name'][-1] == vmi_name),
                     None)
 
     def _assert_vpg_deleted_or_not_ref(self, vpg_uuid, vmi_uuid):
-        ret = self.tf_request_resource('virtual-port-group', vpg_uuid)
-        if ret.status_code != 404:
-            vpg = self.tf_get_resource('virtual-port-group', vpg_uuid)
+        vpg = self.tf_get('virtual-port-group', vpg_uuid)
+        if vpg:
+            vpg = self.tf_get('virtual-port-group', vpg_uuid)
             self.assertFalse(self._check_vpg_contains_vmi_ref(
                 vpg, vmi_uuid))
 
@@ -307,25 +306,26 @@ class TestDeviceManager(IntegrationTestCase):
         """
 
         self.assertIsNotNone(vmi_uuid)
-        vmi = self.tf_get_resource('virtual-machine-interface', vmi_uuid)
+        vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
 
-        self.assertEqual(1, len(vmi.get('virtual_network_refs', [])))
-        self.assertEqual(net_uuid, vmi['virtual_network_refs'][0]['uuid'])
-        self.assertEqual(vlan,
-                         vmi.get('virtual_machine_interface_properties', {})
-                         .get('sub_interface_vlan_tag'))
+        self.assertEqual(1, len(vmi.get_virtual_network_refs() or ()))
+        self.assertEqual(net_uuid, vmi.get_virtual_network_refs()[0]['uuid'])
 
-        self.assertEqual(1, len(vmi.get('virtual_port_group_back_refs', [])))
-        vpg_uuid = vmi['virtual_port_group_back_refs'][0]['uuid']
-        vpg = self.tf_get_resource('virtual-port-group', vpg_uuid)
+        vmi_properties = vmi.get_virtual_machine_interface_properties()
+        self.assertIsNotNone(vmi_properties)
+        self.assertEqual(vlan, vmi_properties.get_sub_interface_vlan_tag())
+
+        self.assertEqual(1, len(vmi.get_virtual_port_group_back_refs() or ()))
+        vpg_uuid = vmi.get_virtual_port_group_back_refs()[0]['uuid']
+        vpg = self.tf_get('virtual-port-group', vpg_uuid)
         self.assertTrue(self._check_vpg_contains_vmi_ref(vpg, vmi_uuid))
 
         pi_refs = {tuple(ref['to'][-2:])
-                   for ref in vpg.get('physical_interface_refs', [])}
+                   for ref in vpg.get_physical_interface_refs() or ()}
         self.assertEqual(set(physical_interfaces), pi_refs)
 
     def _check_vpg_contains_vmi_ref(self, vpg, vmi_uuid):
-        vmi_refs = vpg.get('virtual_machine_interface_refs', [])
+        vmi_refs = vpg.get_virtual_machine_interface_refs() or ()
         for ref in vmi_refs:
             if ref['uuid'] == vmi_uuid:
                 return True

@@ -15,7 +15,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import os
-import requests
 import uuid
 
 from random import randint
@@ -26,6 +25,7 @@ from keystoneauth1 import session
 from keystoneclient.v3 import client as keystone
 from neutronclient.v2_0 import client as neutron
 from oslotest import base
+from vnc_api import vnc_api
 
 
 class TestCase(base.BaseTestCase):
@@ -41,7 +41,9 @@ class IntegrationTestCase(base.BaseTestCase):
         cls.controller_ip = os.getenv('CONTROLLER_IP', 'localhost')
         cls.contrail_ip = os.getenv('CONTRAIL_IP', cls.controller_ip)
 
-        cls.contrail_api = 'http://{}:8082'.format(cls.contrail_ip)
+        cls.contrail_api = vnc_api.VncApi(
+            api_server_host=cls.contrail_ip, api_server_port=8082)
+
         cls.auth_url = 'http://{}/identity/v3'.format(cls.controller_ip)
 
     def setUp(self):
@@ -59,7 +61,7 @@ class IntegrationTestCase(base.BaseTestCase):
 
         # Create keystone project and make TF synchronize it
         self.project = self._create_keystone_project_for_test()
-        self.tf_get_resource('project', self.project.id)
+        self.tf_project = self.tf_get('project', self.project.id)
 
         self.neutronCleanupQueue = []
 
@@ -68,45 +70,51 @@ class IntegrationTestCase(base.BaseTestCase):
         for resource, f_delete in reversed(self.neutronCleanupQueue):
             f_delete(resource['id'])
         self.project.delete()
-        self._cleanup_tf_project()
+        self.tf_purge('project', self.project.id)
 
-    def tf_request_resource(self, resource_name, id):
-        return requests.get(
-            '{}/{}/{}'.format(
-                self.contrail_api, resource_name, uuid.UUID(id)))
+    def tf_create(self, resource):
+        resource_type = resource.get_type()
+        method_name = '{}_create'.format(resource_type.replace('-', '_'))
+        create_method = getattr(self.contrail_api, method_name)
 
-    def tf_get_resource(self, resource_name, id):
-        response = self.tf_request_resource(resource_name=resource_name, id=id)
-        self.assertIn(response.status_code, {200, 301, 302, 303, 304})
-        ret = response.json()
-        self.assertIsNotNone(ret.get(resource_name))
-        return ret.get(resource_name)
+        return create_method(resource)
 
-    def tf_list_resource(self, resource_name):
-        list_name = "{}s".format(resource_name)
-        response = requests.get('{}/{}'.format(self.contrail_api, list_name))
-        self.assertIn(response.status_code, {200, 301, 302, 303, 304})
-        ret = response.json()
-        self.assertIsNotNone(ret.get(list_name))
-        return ret.get(list_name)
+    def tf_get(self, resource_type, resource_id):
+        resource_id = str(uuid.UUID(resource_id))
+        method_name = '{}_read'.format(resource_type.replace('-', '_'))
+        read_method = getattr(self.contrail_api, method_name)
+        try:
+            return read_method(id=resource_id)
+        except vnc_api.NoIdError:
+            return None
 
-    def tf_delete_resource(self, resource, id):
-        return requests.delete(
-            '{}/{}/{}'.format(
-                self.contrail_api, resource, uuid.UUID(id)))
+    def tf_list(self, resource_type, *args, **kwargs):
+        method_name = '{}s_list'.format(resource_type.replace('-', '_'))
+        list_method = getattr(self.contrail_api, method_name)
+        resource_list = list_method(*args, **kwargs)
+        if isinstance(resource_list, dict):
+            resource_list = resource_list['{}s'.format(resource_type)]
 
-    def _cleanup_tf_project(self):
-        # Need to clean up default-openstack Security Group before we can
-        # delete the project from TF completely
-        # TODO(artur.debski) check to do this properly
+        return resource_list
 
-        tf_project = self.tf_get_resource('project', self.project.id)
-        # TODO(maciej.jagiello) debug sg not removed when deleting project
-        for sg in tf_project.get('security_groups', []):
-            if 'default-openstack' in sg['to']:
-                requests.delete(sg['href'])
-                break
-        self.tf_delete_resource('project', self.project.id)
+    def tf_delete(self, resource_type, resource_id):
+        resource_id = str(uuid.UUID(resource_id))
+        method_name = '{}_delete'.format(resource_type.replace('-', '_'))
+        delete_method = getattr(self.contrail_api, method_name)
+        try:
+            delete_method(id=resource_id)
+        except vnc_api.NoIdError:
+            pass
+
+    def tf_purge(self, resource_type, resource_id):
+        try:
+            self.tf_delete(resource_type, resource_id)
+        except vnc_api.RefsExistError as exc:
+            hrefs = exc.message.split('\'')[1::2]
+            for href in hrefs:
+                resource_type = href.split('/')[-2]
+                resource_id = href.split('/')[-1]
+                self.tf_purge(resource_type, resource_id)
 
     def _create_keystone_project_for_test(self):
         proj_name = self.__class__.__name__ + '-' + \

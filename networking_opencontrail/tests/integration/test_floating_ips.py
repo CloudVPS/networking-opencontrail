@@ -68,17 +68,17 @@ class TestFloatingIPs(IntegrationTestCase):
                 uuid.UUID(q_fip.get('floatingip', {}).get('id'))
         }
 
-        tf_fip = self.tf_get_resource(
+        tf_fip = self.tf_get(
             'floating-ip', q_fip['floatingip']['id'])
         self.assertIsNotNone(tf_fip)
 
         contrail_dict = {
             'floating_ip_address':
-                tf_fip.get('floating_ip_address'),
+                tf_fip.get_floating_ip_address(),
             'project_id':
-                uuid.UUID(tf_fip.get('project_refs', [{}])[0].get('uuid')),
+                uuid.UUID(tf_fip.get_project_refs()[0]['uuid']),
             'uuid':
-                uuid.UUID(tf_fip.get('uuid'))
+                uuid.UUID(tf_fip.get_uuid())
         }
 
         self.assertDictEqual(expected, contrail_dict)
@@ -92,16 +92,16 @@ class TestFloatingIPs(IntegrationTestCase):
         }
 
         q_fip = self.q_create_floating_ip(**fip)
-        tf_fip = self.tf_get_resource(
+        tf_fip = self.tf_get(
             'floating-ip', q_fip['floatingip']['id'])
 
         self.assertIsNotNone(tf_fip)
 
         self.q_delete_floating_ip(q_fip)
 
-        req = self.tf_request_resource(
+        tf_fip = self.tf_get(
             'floating-ip', q_fip['floatingip']['id'])
-        self.assertEqual(req.status_code, 404)
+        self.assertIsNone(tf_fip)
 
     @unittest.skip(
         'Will be added after migrating floating ip functionality to vnc_api')
