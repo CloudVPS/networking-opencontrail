@@ -17,8 +17,8 @@ from functools import wraps
 from requests.exceptions import ConnectionError
 
 from networking_opencontrail.common.utils import register_vnc_api_options
-from networking_opencontrail.repository.client import tf_client
-from networking_opencontrail.repository.tag import ml2_tag_manager
+from networking_opencontrail.repository.utils.client import tf_client
+from networking_opencontrail.repository.utils.tag import ml2_tag_manager
 
 
 def initialize():

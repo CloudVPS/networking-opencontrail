@@ -15,6 +15,7 @@
 
 from networking_opencontrail.resources import network
 from networking_opencontrail.resources import vmi
+from networking_opencontrail.resources import vpg
 
 
-__all__ = ['network', 'vmi']
+__all__ = ['network', 'vmi', 'vpg']

@@ -30,7 +30,7 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     """
 
     @mock.patch(
-        "networking_opencontrail.repository.client.vnc_api.VncApi")
+        "networking_opencontrail.repository.utils.client.vnc_api.VncApi")
     def setUp(self, api):
         super(OpenContrailTestCases, self).setUp()
 

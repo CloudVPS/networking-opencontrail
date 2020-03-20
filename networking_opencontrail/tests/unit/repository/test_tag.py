@@ -15,7 +15,7 @@
 
 import mock
 
-from networking_opencontrail.repository.tag import ml2_tag_manager
+from networking_opencontrail.repository.utils.tag import ml2_tag_manager
 from networking_opencontrail.tests import base
 
 from vnc_api import vnc_api
@@ -23,7 +23,7 @@ from vnc_api import vnc_api
 
 class TagManagerTestCase(base.TestCase):
 
-    @mock.patch("networking_opencontrail.repository.tag.tf_client")
+    @mock.patch("networking_opencontrail.repository.utils.tag.tf_client")
     def test_check_tag(self, tf_client):
         tf_client.read_tag.return_value = None
 

@@ -111,35 +111,31 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
     def create_port_postcommit(self, context):
         """Create a port in OpenContrail."""
-        port = context.current
-        network = context.network.current
+        q_port = context.current
+        q_network = context.network.current
 
-        try:
-            repository.vmi.create(port, network)
-        except Exception:
-            LOG.exception("Update port Failed")
+        repository.vpg.create(q_port, q_network)
+        repository.vmi.create(q_port, q_network)
 
     def update_port_postcommit(self, context):
         """Update a port in OpenContrail."""
-        port = context.current
-        prev_port = context.original
-        network = context.network.current
+        q_port = context.current
+        old_q_port = context.original
+        q_network = context.network.current
 
-        try:
-            repository.vmi.update(port, prev_port, network,
-                                  context._plugin_context)
-        except Exception:
-            LOG.exception("Update port Failed")
+        repository.vmi.delete(old_q_port, q_network, context._plugin_context)
+        repository.vpg.delete(old_q_port, q_network)
+
+        repository.vpg.create(q_port, q_network)
+        repository.vmi.create(q_port, q_network)
 
     def delete_port_postcommit(self, context):
         """Delete a port from OpenContrail."""
-        port = context.current
-        network = context.network.current
+        q_port = context.current
+        q_network = context.network.current
 
-        try:
-            repository.vmi.delete(port, network, context._plugin_context)
-        except Exception:
-            LOG.exception("Delete Port Failed")
+        repository.vmi.delete(q_port, q_network, context._plugin_context)
+        repository.vpg.delete(q_port, q_network)
 
     def create_security_group(self, context, sg):
         """Create a Security Group in OpenContrail."""

@@ -18,7 +18,6 @@ from networking_opencontrail.tests import base
 from vnc_api import vnc_api
 
 from networking_opencontrail.resources.vmi import create
-from networking_opencontrail.resources.vmi import needs_update
 from networking_opencontrail.resources.vmi import validate
 
 PORT_VALID = {
@@ -49,7 +48,7 @@ NETWORK_NO_VLAN_ID = {
 
 
 @ddt.ddt
-class VMITestCase(base.TestCase):
+class VMIResourceTestCase(base.TestCase):
     def test_create(self):
         project = vnc_api.Project(name="project_name")
         project.set_uuid("project-uuid")
@@ -84,12 +83,3 @@ class VMITestCase(base.TestCase):
 
     def test_validate(self):
         self.assertIsNone(validate(PORT_VALID, NETWORK_VALID))
-
-    @ddt.data(
-        (PORT_VALID, PORT_VALID, False),
-        (PORT_VALID, PORT_NO_NETWORK_ID, True),
-        (PORT_NO_HOST_ID, PORT_VALID, True),
-    )
-    @ddt.unpack
-    def test_needs_update(self, port, prev_port, result):
-        self.assertEqual(result, needs_update(port, prev_port))

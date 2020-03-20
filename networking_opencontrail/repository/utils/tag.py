@@ -16,7 +16,7 @@
 from oslo_log import log as logging
 from vnc_api import vnc_api
 
-from networking_opencontrail.repository.client import tf_client
+from networking_opencontrail.repository.utils.client import tf_client
 
 
 LOG = logging.getLogger(__name__)

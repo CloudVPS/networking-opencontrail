@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import uuid
 
 import ddt
 
@@ -22,7 +21,7 @@ from networking_opencontrail.tests.base import IntegrationTestCase
 
 
 @ddt.ddt
-class TestVMIs(IntegrationTestCase):
+class TestVPGsAndVMIs(IntegrationTestCase):
     LAST_VLAN_ID = 100
     FABRIC = {'qfx-test-1': ['xe-0/0/0'],
               'qfx-test-2': ['xe-0/0/0',
@@ -36,7 +35,7 @@ class TestVMIs(IntegrationTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestVMIs, cls).setUpClass()
+        super(TestVPGsAndVMIs, cls).setUpClass()
         cls._vnc_api = vnc_api.VncApi(api_server_host=cls.contrail_ip)
         cls._cleanup_topology_queue = []
         cls._cleanup_fabric_queue = []
@@ -50,18 +49,17 @@ class TestVMIs(IntegrationTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super(TestVMIs, cls).tearDownClass()
+        super(TestVPGsAndVMIs, cls).tearDownClass()
         cls._cleanup()
 
     def setUp(self):
-        super(TestVMIs, self).setUp()
+        super(TestVPGsAndVMIs, self).setUp()
 
         self.test_network, self.vlan_id = self._make_vlan_network()
-        self._make_fake_vpgs()
 
     def tearDown(self):
         self._cleanup_vpgs()
-        super(TestVMIs, self).tearDown()
+        super(TestVPGsAndVMIs, self).tearDown()
 
     def test_create_vlan_port_on_node(self):
         port = {'name': 'test_fabric_port',
@@ -391,32 +389,6 @@ class TestVMIs(IntegrationTestCase):
                                              bms_port_info=bm_info)
                     port_uuid = cls._vnc_api.port_create(node_port)
                 cls._cleanup_topology_queue.append(('port', port_uuid))
-
-    def _make_fake_vpgs(self):
-        # TODO(aszczepanski) Remove this once VPGs are created automatically
-        fabric = self.tf_get('fabric', self._fabric_uuid)
-
-        for node, ports in self.TOPOLOGY.items():
-            for port, pis in ports.items():
-                vpg_name = "vpg_{}".format(node)
-                vpg_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, vpg_name))
-
-                if self.tf_get("virtual-port-group", vpg_uuid):
-                    continue
-
-                vpg = vnc_api.VirtualPortGroup(name=vpg_name,
-                                               parent_obj=fabric)
-                vpg.set_uuid(vpg_uuid)
-
-                pi_fq_name = ["default-global-system-config"] + list(pis)
-                pi = self.tf_list(
-                    'physical-interface',
-                    detail=True,
-                    fq_names=[pi_fq_name]
-                )[0]
-                vpg.add_physical_interface(pi)
-
-                self.tf_create(vpg)
 
     def _cleanup_vpgs(self):
         fabric = self._vnc_api.fabric_read(id=self._fabric_uuid)

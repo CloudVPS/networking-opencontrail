@@ -79,9 +79,9 @@ class TFClient(object):
     def list_networks(self):
         return self.session.virtual_networks_list(detail=True)
 
-    def read_network(self, network_id):
+    def read_network(self, uuid=None, fq_name=None):
         try:
-            return self.session.virtual_network_read(id=network_id)
+            return self.session.virtual_network_read(id=uuid, fq_name=fq_name)
         except vnc_api.NoIdError:
             return None
 
@@ -91,32 +91,69 @@ class TFClient(object):
     def update_network(self, network):
         self.session.virtual_network_update(network)
 
-    def delete_network(self, network_id):
-        self.session.virtual_network_delete(id=network_id)
+    def delete_network(self, uuid=None, fq_name=None):
+        self.session.virtual_network_delete(id=uuid, fq_name=fq_name)
 
-    def read_vmi(self, vmi_id):
+    def list_vmis(self):
+        return self.session.virtual_machine_interfaces_list(detail=True)
+
+    def read_vmi(self, uuid=None, fq_name=None):
         try:
-            return self.session.virtual_machine_interface_read(id=vmi_id)
+            return self.session.virtual_machine_interface_read(
+                id=uuid, fq_name=fq_name)
         except vnc_api.NoIdError:
             return None
 
     def create_vmi(self, vmi):
         self.session.virtual_machine_interface_create(vmi)
 
-    def delete_vmi(self, vmi_id):
-        self.session.virtual_machine_interface_delete(id=vmi_id)
+    def delete_vmi(self, uuid=None, fq_name=None):
+        self.session.virtual_machine_interface_delete(id=uuid, fq_name=fq_name)
 
-    def read_vpg(self, vpg_id):
+    def list_vpgs(self):
+        return self.session.virtual_port_groups_list(detail=True)
+
+    def read_vpg(self, uuid=None, fq_name=None):
         try:
-            return self.session.virtual_port_group_read(id=vpg_id)
+            return self.session.virtual_port_group_read(
+                id=uuid, fq_name=fq_name)
         except vnc_api.NoIdError:
             return None
+
+    def create_vpg(self, vpg):
+        self.session.virtual_port_group_create(vpg)
 
     def update_vpg(self, vpg):
         self.session.virtual_port_group_update(vpg)
 
+    def delete_vpg(self, uuid=None, fq_name=None):
+        self.session.virtual_port_group_delete(id=uuid, fq_name=fq_name)
+
+    def read_port(self, uuid=None, fq_name=None):
+        try:
+            return self.session.port_read(
+                id=uuid, fq_name=fq_name
+            )
+        except vnc_api.NoIdError:
+            return None
+
+    def read_physical_interface(self, uuid=None, fq_name=None):
+        try:
+            return self.session.physical_interface_read(
+                id=uuid, fq_name=fq_name
+            )
+        except vnc_api.NoIdError:
+            return None
+
+    def read_node(self, uuid=None, fq_name=None):
+        try:
+            return self.session.node_read(id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            return None
+
     @property
     def connected(self):
         return self.session is not None
+
 
 tf_client = TFClient()

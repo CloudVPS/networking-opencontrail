@@ -20,7 +20,7 @@ from networking_opencontrail.resources.network import create
 from networking_opencontrail.resources.network import update
 
 
-class NetworkConverterTestCase(base.TestCase):
+class NetworkResourceTestCase(base.TestCase):
 
     def test_create_from_q_network(self):
         q_network = {

@@ -24,10 +24,11 @@ REQUIRED_PORT_FIELDS = [
 ]
 
 
-def create(port, tf_network, project, vlan_id):
-    name = generate_name(port, tf_network)
+def create(q_port, network, project, vlan_id):
+    fake_q_network = {'name': network.name}
+    name = make_name(q_port, fake_q_network)
     vmi = vnc_api.VirtualMachineInterface(name=name, parent_obj=project)
-    vmi.set_uuid(utils.generate_uuid(name))
+    vmi.set_uuid(utils.make_uuid(name))
 
     id_perms = vnc_api.IdPermsType(enable=True, creator=project.uuid)
     vmi.set_id_perms(id_perms)
@@ -37,37 +38,27 @@ def create(port, tf_network, project, vlan_id):
     )
     vmi.set_virtual_machine_interface_properties(vmi_properties)
 
-    vmi.set_virtual_network(tf_network)
+    vmi.set_virtual_network(network)
 
     return vmi
 
 
-def validate(port, network):
+def validate(q_port, q_network):
     for field in REQUIRED_PORT_FIELDS:
-        if field not in port:
+        if field not in q_port:
             raise ValueError("No {} field in port".format(field))
 
-    if not port.get("device_owner", "").startswith(
+    if not q_port.get("device_owner", "").startswith(
         constants.DEVICE_OWNER_COMPUTE_PREFIX):
         raise ValueError("Invalid device_owner field value")
 
-    if not network.get("provider:segmentation_id"):
+    if not q_network.get("provider:segmentation_id"):
         raise ValueError(
-            "No VLAN ID set for network {}".format(network["name"]))
+            "No VLAN ID set for network {}".format(q_network["name"]))
 
 
-def needs_update(port, prev_port):
-    for field in REQUIRED_PORT_FIELDS:
-        if port.get(field) != prev_port.get(field):
-            return True
-    return False
-
-
-def generate_name(port, network):
-    try:
-        network_name = network.name
-    except AttributeError:
-        network_name = network["name"]
-    host_id = port["binding:host_id"]
+def make_name(q_port, q_network):
+    network_name = q_network["name"]
+    host_id = q_port["binding:host_id"]
     vmi_name = "vmi_{}_{}".format(network_name, host_id)
     return vmi_name
