@@ -30,19 +30,16 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     """
 
     @mock.patch(
-        "networking_opencontrail.drivers.vnc_api_driver.vnc_api.VncApi")
+        "networking_opencontrail.repository.client.vnc_api.VncApi")
     def setUp(self, api):
         super(OpenContrailTestCases, self).setUp()
 
         # Base class validates configs, mock it after calling
         with mock.patch("oslo_config.cfg.CONF"):
-            mech_driver.dm_integrator = mock.MagicMock()
             mech_driver.subnet_dns_integrator = mock.MagicMock()
             mech_driver.drv = mock.MagicMock()
             self.drv = mech_driver.OpenContrailMechDriver()
             self.drv.initialize()
-            self.drv.dm_integrator = mock.MagicMock(enabled=False)
-            self.drv.tf_client = mock.MagicMock()
 
     def tearDown(self):
         super(OpenContrailTestCases, self).tearDown()
@@ -121,193 +118,6 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
                 subnet_context._plugin_context, subnet_id, subnet))
 
         mech_driver.drv.assert_has_calls(expected_calls)
-
-    def test_create_port(self):
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        port_id = 'port-1'
-
-        port_context, port = self.get_port_context(tenant_id, network_id,
-                                                   port_id)
-        self.drv.create_port_postcommit(port_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().create_port(
-                port_context._plugin_context, port)
-        ]
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-
-    def test_delete_port(self):
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        port_id = 'port-1'
-
-        port_context, port = self.get_port_context(tenant_id, network_id,
-                                                   port_id)
-        self.drv.delete_port_postcommit(port_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().delete_port(
-                port_context._plugin_context, port_id)
-        ]
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-
-    def test_delete_port_when_dm_enabled(self):
-        self.drv.dm_integrator.enabled = True
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        port_id = 'port-1'
-
-        port_context, port = self.get_port_context(tenant_id, network_id,
-                                                   port_id)
-        self.drv.delete_port_postcommit(port_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().delete_port(
-                port_context._plugin_context, port_id),
-        ]
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-        self.drv.dm_integrator.delete_vlan_tagging_for_port.assert_called_with(
-            port_context._plugin_context, port['port'])
-
-    def test_update_port(self):
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        port_id = 'port-1'
-        port_name = 'first-port'
-
-        port_context, port = self.get_port_context(tenant_id, network_id,
-                                                   port_id, port_name)
-        self.drv.create_port_postcommit(port_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().create_port(
-                port_context._plugin_context, port)
-        ]
-
-        # Chnage the port properties
-        port_name = 'second-port'
-
-        port_context, port = self.get_port_context(tenant_id, network_id,
-                                                   port_id, port_name)
-        self.drv.update_port_postcommit(port_context)
-
-        expected_calls.append(
-            mock.call.OpenContrailDrivers().update_port(
-                port_context._plugin_context, port_id, port))
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-
-    def test_update_port_when_dm_enabled(self):
-        self.drv.dm_integrator.enabled = True
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        port_id = 'port-1'
-        port_name = 'first-port'
-
-        port_context, port = self.get_port_context(tenant_id, network_id,
-                                                   port_id, port_name)
-        self.drv.create_port_postcommit(port_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().create_port(
-                port_context._plugin_context, port)
-        ]
-
-        # Chnage the port properties
-        port_name = 'second-port'
-
-        port_context, port = self.get_port_context(tenant_id, network_id,
-                                                   port_id, port_name)
-        self.drv.update_port_postcommit(port_context)
-
-        expected_calls.append(
-            mock.call.OpenContrailDrivers().update_port(
-                port_context._plugin_context, port_id, port))
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-        self.drv.dm_integrator.sync_vlan_tagging_for_port.assert_called_with(
-            port_context._plugin_context, port_context.current,
-            port_context.original)
-
-    def test_create_port_omit_callback(self):
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        port_id = 'port-1'
-        owner = mech_driver.OMIT_DEVICES_TYPES[0]
-
-        port_context, _ = self.get_port_context(tenant_id, network_id,
-                                                port_id, device_owner=owner)
-        self.drv.create_port_postcommit(port_context)
-
-        mech_driver.drv.OpenContrailDrivers().create_port.assert_not_called()
-
-    def test_delete_port_omit_callback(self):
-        network_id = 'test_net1'
-        tenant_id = 'ten-1'
-        port_id = 'port-1'
-        owner = mech_driver.OMIT_DEVICES_TYPES[0]
-
-        port_context, _ = self.get_port_context(tenant_id, network_id,
-                                                port_id, device_owner=owner)
-        self.drv.delete_port_postcommit(port_context)
-
-        mech_driver.drv.OpenContrailDrivers().delete_port.assert_not_called()
-
-    def test_update_port_omit_callback(self):
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        port_id = 'port-1'
-        owner = mech_driver.OMIT_DEVICES_TYPES[0]
-
-        port_context, _ = self.get_port_context(tenant_id, network_id,
-                                                port_id, device_owner=owner)
-
-        self.drv.update_port_postcommit(port_context)
-
-        mech_driver.drv.OpenContrailDrivers().update_port.assert_not_called()
-
-    def test_bind_port_looks_up_correct_name(self):
-        context = mock.Mock()
-        context._port = {"binding:host_id": "asd"}
-        context.current = {"id": "asd"}
-        context.network.current = {"id": "asd"}
-
-        self.drv.bind_port(context)
-        self.drv.tf_client.get_virtual_router.assert_called_with(
-            fq_name=[
-                self.drv.tf_client.DEFAULT_GLOBAL_CONF,
-                context._port["binding:host_id"]])
-
-    def test_bind_port_ommits_port_when_not_in_tf(self):
-        context = mock.Mock()
-        context._port = {"binding:host_id": "asd"}
-        context.current = {"id": "asd"}
-        context.network.current = {"id": "asd"}
-
-        self.drv.tf_client.get_virtual_router.return_value = None
-
-        self.drv.bind_port(context)
-
-        self.drv.drv.bind_port.assert_not_called()
-
-    def test_bind_port_actually_binds(self):
-        context = mock.Mock()
-        context._port = {"binding:host_id": "asd"}
-        context.current = {"id": "asd"}
-        context.network.current = {"id": "asd"}
-
-        self.drv.bind_port(context)
-
-        self.drv.drv.bind_port.assert_called_with(context)
 
     def test_create_security_group(self):
         ctx = fake_plugin_context('ten-1')
@@ -391,19 +201,6 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
         subnt = {'subnet': subnet}
         return context, subnt
 
-    def get_port_context(self, ten_id, net_id, port_id, port_name=None,
-                         device_owner=None):
-        if not port_name:
-            port_name = 'test_port'
-        port = {'id': port_id,
-                'network_id': net_id,
-                'tenant_id': ten_id,
-                'name': port_name,
-                'device_owner': device_owner}
-        context = fake_port_context(ten_id, port, port)
-        prt = {'port': port}
-        return context, prt
-
 
 class fake_network_context(object):
     """Generate network context for testing purposes."""
@@ -437,23 +234,6 @@ class fake_subnet_context(object):
     @property
     def original(self):
         return self._original_subnet
-
-
-class fake_port_context(object):
-    """Generate port context for testing purposes."""
-
-    def __init__(self, tenant_id, port, original_port=None):
-        self._port = port
-        self._original_port = original_port
-        self._plugin_context = fake_plugin_context(tenant_id)
-
-    @property
-    def current(self):
-        return self._port
-
-    @property
-    def original(self):
-        return self._original_port
 
 
 class fake_plugin_context(object):

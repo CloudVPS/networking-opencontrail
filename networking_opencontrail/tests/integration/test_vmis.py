@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import uuid
+
 import ddt
 
 from vnc_api import vnc_api
@@ -20,12 +22,7 @@ from networking_opencontrail.tests.base import IntegrationTestCase
 
 
 @ddt.ddt
-class TestDeviceManager(IntegrationTestCase):
-    """Integration tests for Device Manager integration.
-
-    Those tests expect to enable DM integration in environment.
-    """
-
+class TestVMIs(IntegrationTestCase):
     LAST_VLAN_ID = 100
     FABRIC = {'qfx-test-1': ['xe-0/0/0'],
               'qfx-test-2': ['xe-0/0/0',
@@ -39,7 +36,7 @@ class TestDeviceManager(IntegrationTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestDeviceManager, cls).setUpClass()
+        super(TestVMIs, cls).setUpClass()
         cls._vnc_api = vnc_api.VncApi(api_server_host=cls.contrail_ip)
         cls._cleanup_topology_queue = []
         cls._cleanup_fabric_queue = []
@@ -53,19 +50,23 @@ class TestDeviceManager(IntegrationTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super(TestDeviceManager, cls).tearDownClass()
+        super(TestVMIs, cls).tearDownClass()
         cls._cleanup()
 
     def setUp(self):
-        super(TestDeviceManager, self).setUp()
+        super(TestVMIs, self).setUp()
 
         self.test_network, self.vlan_id = self._make_vlan_network()
+        self._make_fake_vpgs()
 
-    def test_create_vlan_port_on_node_creates_dm_bindings(self):
+    def tearDown(self):
+        self._cleanup_vpgs()
+        super(TestVMIs, self).tearDown()
+
+    def test_create_vlan_port_on_node(self):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_id': 'vm-1',
                 'device_owner': 'compute:fake-nova'}
         self.q_create_port(**port)
         vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
@@ -73,22 +74,17 @@ class TestDeviceManager(IntegrationTestCase):
         vmi_uuid = self._find_vmi(vmi_name)
         self._assert_dm_vmi(vmi_uuid,
                             self.test_network['network']['id'],
-                            self.vlan_id,
-                            [('qfx-test-1', 'xe-0/0/0')])
+                            self.vlan_id)
 
     def test_create_two_ports_on_two_nodes(self):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_id': 'vm-1',
-                'device_owner': 'compute:fake-nova',
-                'mac_address': '11:11:11:11:11:11'
-                }
+                'device_owner': 'compute:fake-nova'}
         self.q_create_port(**port)
 
         port.update({'device_id': 'vm-2',
-                     'binding:host_id': 'compute-2',
-                     'mac_address': '22:22:22:22:22:22'})
+                     'binding:host_id': 'compute-2'})
         self.q_create_port(**port)
 
         vpg_uuids = set()
@@ -100,24 +96,18 @@ class TestDeviceManager(IntegrationTestCase):
             vmi_uuid = self._find_vmi(vmi_name)
             self._assert_dm_vmi(vmi_uuid,
                                 self.test_network['network']['id'],
-                                self.vlan_id,
-                                physical_interfaces)
+                                self.vlan_id)
 
             vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
             vpg_uuids.add(vmi.get_virtual_port_group_back_refs()[0]['uuid'])
 
         self.assertEqual(2, len(vpg_uuids))
 
-    @ddt.data({'binding:host_id': 'ummanaged-node'},
-              {'device_id': ''},
-              {'device_owner': 'not-compute:fake'})
-    def test_create_unmanaged_port_not_creates_dm_bindings(self, change):
+    def test_create_unmanaged_port(self):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_id': 'vm-1',
-                'device_owner': 'compute:fake-nova'}
-        port.update(change)
+                'device_owner': 'not-compute:fake'}
         self.q_create_port(**port)
 
         vmi_name = self._make_vmi_name(self.test_network,
@@ -125,7 +115,7 @@ class TestDeviceManager(IntegrationTestCase):
         vmi_uuid = self._find_vmi(vmi_name)
         self.assertIsNone(vmi_uuid)
 
-    def test_create_port_in_not_vlan_network_not_creates_dm_bindings(self):
+    def test_create_port_in_non_vlan_network(self):
         net = {'name': 'test_notvlan_network',
                'admin_state_up': True,
                'provider:network_type': 'local'}
@@ -134,7 +124,6 @@ class TestDeviceManager(IntegrationTestCase):
         port = {'name': 'test_fabric_port',
                 'network_id': network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_id': 'vm-1',
                 'device_owner': 'compute:fake-nova'}
         self.q_create_port(**port)
         vmi_name = self._make_vmi_name(network, 'compute-node')
@@ -142,11 +131,10 @@ class TestDeviceManager(IntegrationTestCase):
         vmi_uuid = self._find_vmi(vmi_name)
         self.assertIsNone(vmi_uuid)
 
-    def test_update_port_changes_node(self):
+    def test_update_to_managed(self):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_id': 'vm-1',
                 'device_owner': 'compute:fake-nova'}
         q_port = self.q_create_port(**port)
         vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
@@ -154,8 +142,7 @@ class TestDeviceManager(IntegrationTestCase):
         vmi_uuid = self._find_vmi(vmi_name)
         self._assert_dm_vmi(vmi_uuid,
                             self.test_network['network']['id'],
-                            self.vlan_id,
-                            [('qfx-test-1', 'xe-0/0/0')])
+                            self.vlan_id)
 
         self.q_update_port(q_port, **{'binding:host_id': 'compute-2'})
 
@@ -164,18 +151,12 @@ class TestDeviceManager(IntegrationTestCase):
         vmi_uuid_2 = self._find_vmi(vmi_name_2)
         self._assert_dm_vmi(vmi_uuid_2,
                             self.test_network['network']['id'],
-                            self.vlan_id,
-                            [('qfx-test-2', 'xe-0/0/0'),
-                             ('qfx-test-2', 'xe-1/1/1')])
+                            self.vlan_id)
 
-    @ddt.data({'binding:host_id': 'unmanaged-node'},
-              {'device_id': ''},
-              {'device_owner': 'not-compute:fake'})
-    def test_update_port_removes_bindings(self, change):
+    def test_update_to_unmanaged(self):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_id': 'vm-1',
                 'device_owner': 'compute:fake-nova'}
         q_port = self.q_create_port(**port)
         vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
@@ -183,19 +164,19 @@ class TestDeviceManager(IntegrationTestCase):
         vmi_uuid = self._find_vmi(vmi_name)
         self._assert_dm_vmi(vmi_uuid,
                             self.test_network['network']['id'],
-                            self.vlan_id,
-                            [('qfx-test-1', 'xe-0/0/0')])
+                            self.vlan_id)
 
         vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
         vpg_uuid = vmi.get_virtual_port_group_back_refs()[0]['uuid']
 
+        change = {'device_owner': 'not-compute:fake'}
         self.q_update_port(q_port, **change)
 
         vmi_uuid = self._find_vmi(vmi_name)
         self.assertIsNone(vmi_uuid)
         self._assert_vpg_deleted_or_not_ref(vpg_uuid, vmi_uuid)
 
-    def test_delete_last_port_removes_dm_bindings(self):
+    def test_delete_last_port(self):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
@@ -263,8 +244,7 @@ class TestDeviceManager(IntegrationTestCase):
             vmi_uuid = self._find_vmi(vmi_name)
             self._assert_dm_vmi(vmi_uuid,
                                 network['network']['id'],
-                                vlan_id,
-                                [('qfx-test-1', 'xe-0/0/0')])
+                                vlan_id)
             vmi_uuids.append(vmi_uuid)
 
             vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
@@ -295,14 +275,14 @@ class TestDeviceManager(IntegrationTestCase):
             self.assertFalse(self._check_vpg_contains_vmi_ref(
                 vpg, vmi_uuid))
 
-    def _assert_dm_vmi(self, vmi_uuid, net_uuid, vlan, physical_interfaces):
+    def _assert_dm_vmi(self, vmi_uuid, net_uuid, vlan):
         """Assert that VMI with bindings for DM is created properly.
 
             1. VMI uuid exists
             2. VMI is connected only to given network
             3. VMI has right VLAN tag
             4. VMI has reference to one VPG and this VPG has reference to it
-            5. VPG is connected only to expected physical interfaces
+            5. VMI is tagged with label=__ML2__ tag
         """
 
         self.assertIsNotNone(vmi_uuid)
@@ -320,9 +300,8 @@ class TestDeviceManager(IntegrationTestCase):
         vpg = self.tf_get('virtual-port-group', vpg_uuid)
         self.assertTrue(self._check_vpg_contains_vmi_ref(vpg, vmi_uuid))
 
-        pi_refs = {tuple(ref['to'][-2:])
-                   for ref in vpg.get_physical_interface_refs() or ()}
-        self.assertEqual(set(physical_interfaces), pi_refs)
+        tag_names = [tag_ref["to"][-1] for tag_ref in vmi.get_tag_refs() or ()]
+        self.assertIn("label=__ML2__", tag_names)
 
     def _check_vpg_contains_vmi_ref(self, vpg, vmi_uuid):
         vmi_refs = vpg.get_virtual_machine_interface_refs() or ()
@@ -343,9 +322,7 @@ class TestDeviceManager(IntegrationTestCase):
 
     @staticmethod
     def _make_vmi_name(vn_dict, host_id):
-        return "_vlan_tag_for_vn_{}_compute_{}".format(
-            vn_dict['network']['id'],
-            host_id)
+        return "vmi_{}_{}".format(vn_dict['network']['name'], host_id)
 
     @classmethod
     def _make_fake_fabric(cls):
@@ -415,22 +392,47 @@ class TestDeviceManager(IntegrationTestCase):
                     port_uuid = cls._vnc_api.port_create(node_port)
                 cls._cleanup_topology_queue.append(('port', port_uuid))
 
-    @classmethod
-    def _add_vpg_to_cleanup(cls):
-        fabric = cls._vnc_api.fabric_read(id=cls._fabric_uuid)
+    def _make_fake_vpgs(self):
+        # TODO(aszczepanski) Remove this once VPGs are created automatically
+        fabric = self.tf_get('fabric', self._fabric_uuid)
+
+        for node, ports in self.TOPOLOGY.items():
+            for port, pis in ports.items():
+                vpg_name = "vpg_{}".format(node)
+                vpg_uuid = str(uuid.uuid3(uuid.NAMESPACE_DNS, vpg_name))
+
+                if self.tf_get("virtual-port-group", vpg_uuid):
+                    continue
+
+                vpg = vnc_api.VirtualPortGroup(name=vpg_name,
+                                               parent_obj=fabric)
+                vpg.set_uuid(vpg_uuid)
+
+                pi_fq_name = ["default-global-system-config"] + list(pis)
+                pi = self.tf_list(
+                    'physical-interface',
+                    detail=True,
+                    fq_names=[pi_fq_name]
+                )[0]
+                vpg.add_physical_interface(pi)
+
+                self.tf_create(vpg)
+
+    def _cleanup_vpgs(self):
+        fabric = self._vnc_api.fabric_read(id=self._fabric_uuid)
         for vpg_ref in fabric.get_virtual_port_groups() or ():
             vpg_uuid = vpg_ref['uuid']
-            cls._cleanup_fabric_queue.append(
-                ('virtual_port_group', vpg_uuid))
-            vpg = cls._vnc_api.virtual_port_group_read(id=vpg_uuid)
+            vpg = self._vnc_api.virtual_port_group_read(id=vpg_uuid)
             for vmi_ref in vpg.get_virtual_machine_interface_refs() or ():
-                cls._cleanup_fabric_queue.append(
-                    ('virtual_machine_interface', vmi_ref['uuid'])
+                vmi = self._vnc_api.virtual_machine_interface_read(
+                    vmi_ref["to"]
                 )
+                vpg.del_virtual_machine_interface(vmi)
+            self._vnc_api.virtual_port_group_update(vpg)
+            self._vnc_api.virtual_port_group_delete(id=vpg.uuid)
 
     @classmethod
     def _cleanup(cls):
-        cls._add_vpg_to_cleanup()
         reraise = False
 
         for queue in [cls._cleanup_fabric_queue, cls._cleanup_topology_queue]:

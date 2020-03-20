@@ -19,12 +19,14 @@ from networking_opencontrail.repository.initialize import connect
 from networking_opencontrail.repository.initialize import initialize
 from networking_opencontrail.repository import network
 from networking_opencontrail.repository.tag import ml2_tag_manager
+from networking_opencontrail.repository import vmi
 
 
 __all__ = [
     'connect',
     'initialize',
     'network',
+    'vmi',
     'tf_client',
     'ml2_tag_manager',
     'ConnectionError',

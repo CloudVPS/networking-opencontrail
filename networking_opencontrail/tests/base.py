@@ -51,7 +51,7 @@ class IntegrationTestCase(base.BaseTestCase):
 
         auth = identity.V3Password(auth_url=self.auth_url,
                                    username='admin', password='admin',
-                                   project_name='demo',
+                                   project_name='admin',
                                    project_domain_id='default',
                                    user_domain_id='default')
         sess = session.Session(auth=auth)
@@ -101,6 +101,14 @@ class IntegrationTestCase(base.BaseTestCase):
         resource_id = str(uuid.UUID(resource_id))
         method_name = '{}_delete'.format(resource_type.replace('-', '_'))
         delete_method = getattr(self.contrail_api, method_name)
+
+        if resource_type == 'virtual-port-group':
+            vpg = self.tf_get(resource_type, resource_id)
+            for vmi_ref in vpg.get_virtual_machine_interface_refs() or ():
+                vmi = self.tf_get('virtual-machine-interface', vmi_ref["uuid"])
+                vpg.del_virtual_machine_interface(vmi)
+            self.contrail_api.virtual_port_group_update(vpg)
+
         try:
             delete_method(id=resource_id)
         except vnc_api.NoIdError:

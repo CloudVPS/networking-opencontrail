@@ -18,8 +18,6 @@ import networking_opencontrail.drivers.drv_opencontrail as drv
 from neutron_lib.plugins.ml2 import api
 
 from networking_opencontrail.common import utils
-from networking_opencontrail.dm import dm_integrator
-from networking_opencontrail.drivers.vnc_api_driver import VncApiClient
 from networking_opencontrail.l3 import snat_synchronizer
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail.ml2 import subnet_dns_integrator
@@ -57,15 +55,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
             LOG.error(
                 "Error while connecting to Contrail."
                 "Check APISERVER config section.")
-
-        # This part is temporary while old architecture is supported
-        try:
-            tf_client = VncApiClient()
-            self.tf_client = tf_client
-            self.dm_integrator = dm_integrator.DeviceManagerIntegrator(
-                tf_client)
-        except Exception:
-            LOG.error("Connection error, restart neutron")
 
         self.drv = tf_driver
         self.sg_handler = (
@@ -122,71 +111,35 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
     def create_port_postcommit(self, context):
         """Create a port in OpenContrail."""
-        port = {'port': dict(context.current)}
-
-        if self._is_callback_to_omit(port['port']['device_owner']):
-            return
+        port = context.current
+        network = context.network.current
 
         try:
-            self.drv.create_port(context._plugin_context, port)
+            repository.vmi.create(port, network)
         except Exception:
-            LOG.exception("Create Port Failed")
+            LOG.exception("Update port Failed")
 
     def update_port_postcommit(self, context):
         """Update a port in OpenContrail."""
-        port = {'port': dict(context.current)}
-
-        if self._is_callback_to_omit(port['port']['device_owner']):
-            return
+        port = context.current
+        prev_port = context.original
+        network = context.network.current
 
         try:
-            self.drv.update_port(context._plugin_context,
-                                 port['port']['id'], port)
-            if self.dm_integrator.enabled:
-                self.dm_integrator.sync_vlan_tagging_for_port(
-                    context._plugin_context, context.current, context.original)
+            repository.vmi.update(port, prev_port, network,
+                                  context._plugin_context)
         except Exception:
             LOG.exception("Update port Failed")
 
     def delete_port_postcommit(self, context):
         """Delete a port from OpenContrail."""
         port = context.current
-
-        if self._is_callback_to_omit(port['device_owner']):
-            return
+        network = context.network.current
 
         try:
-            self.drv.delete_port(context._plugin_context, port['id'])
-            if self.dm_integrator.enabled:
-                self.dm_integrator.delete_vlan_tagging_for_port(
-                    context._plugin_context, port)
+            repository.vmi.delete(port, network, context._plugin_context)
         except Exception:
             LOG.exception("Delete Port Failed")
-
-    def bind_port(self, context):
-        """Bind port in OpenContrail."""
-        try:
-            LOG.debug(
-                "Attempting to bind port {port} on "
-                "network {network}".format(
-                    port=context.current['id'],
-                    network=context.network.current['id']))
-
-            host_id = context._port['binding:host_id']
-            fq_name = [
-                self.tf_client.DEFAULT_GLOBAL_CONF,
-                host_id]
-            vrouter = self.tf_client.get_virtual_router(fq_name=fq_name)
-
-            if vrouter is None:
-                LOG.debug(
-                    "Refusing to bind port for {host}. "
-                    "Not managed by TF.".format(host=host_id))
-                return
-
-            self.drv.bind_port(context)
-        except Exception:
-            LOG.exception("Bind Port Failed")
 
     def create_security_group(self, context, sg):
         """Create a Security Group in OpenContrail."""
@@ -235,14 +188,3 @@ class OpenContrailMechDriver(api.MechanismDriver):
         return [
             worker.TFSyncWorker(OMIT_DEVICES_TYPES)
         ]
-
-    def _is_callback_to_omit(self, device_owner):
-        # Operation on port should be not propagated to TungstenFabric when:
-        # 1) device type have ports in Neutron, which are not necessary in TF
-        # 2) port is created by plugin to be compatibility with TF
-
-        if device_owner in OMIT_DEVICES_TYPES:
-            LOG.debug("Port device is %s: omit callback to TungstenFabric" %
-                      device_owner)
-            return True
-        return False

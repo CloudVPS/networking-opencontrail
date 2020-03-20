@@ -13,6 +13,7 @@
 #    under the License.
 
 import requests
+import uuid
 
 from oslo_config import cfg
 
@@ -77,3 +78,7 @@ def vnc_api_is_authenticated():
         return True
     else:
         response.raise_for_status()
+
+
+def generate_uuid(resource_name):
+    return str(uuid.uuid3(uuid.NAMESPACE_DNS, resource_name))

@@ -94,9 +94,29 @@ class TFClient(object):
     def delete_network(self, network_id):
         self.session.virtual_network_delete(id=network_id)
 
+    def read_vmi(self, vmi_id):
+        try:
+            return self.session.virtual_machine_interface_read(id=vmi_id)
+        except vnc_api.NoIdError:
+            return None
+
+    def create_vmi(self, vmi):
+        self.session.virtual_machine_interface_create(vmi)
+
+    def delete_vmi(self, vmi_id):
+        self.session.virtual_machine_interface_delete(id=vmi_id)
+
+    def read_vpg(self, vpg_id):
+        try:
+            return self.session.virtual_port_group_read(id=vpg_id)
+        except vnc_api.NoIdError:
+            return None
+
+    def update_vpg(self, vpg):
+        self.session.virtual_port_group_update(vpg)
+
     @property
     def connected(self):
         return self.session is not None
-
 
 tf_client = TFClient()
