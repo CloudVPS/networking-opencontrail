@@ -40,11 +40,6 @@ class TFSyncWorker(worker.BaseWorker):
         self._running = False
         self.done = event.Event()
 
-        try:
-            repository.connect()
-        except Exception as e:
-            LOG.warning("Exception: %s", str(e))
-
     def start(self, **kwargs):
         super(TFSyncWorker, self).start()
         LOG.info("ML2TFSynchronizer worker started")
@@ -68,7 +63,12 @@ class TFSyncWorker(worker.BaseWorker):
     def sync_loop(self):
         while self._running:
             try:
+                repository.connect()
                 self._synchronize()
+            except repository.ConnectionError:
+                LOG.error(
+                    "Error while connecting to Contrail."
+                    "Check APISERVER config section.")
             except Exception:
                 LOG.exception("Periodic Sync Failed")
 

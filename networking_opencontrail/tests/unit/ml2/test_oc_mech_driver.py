@@ -36,7 +36,6 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
         # Base class validates configs, mock it after calling
         with mock.patch("oslo_config.cfg.CONF"):
-            self.fake_api = mock.MagicMock()
             mech_driver.dm_integrator = mock.MagicMock()
             mech_driver.subnet_dns_integrator = mock.MagicMock()
             mech_driver.drv = mock.MagicMock()
@@ -379,16 +378,6 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
     def mock_drv_opencontrail_method(self, method_name, return_value):
         mocked_method = mock.Mock(return_value=return_value)
         setattr(self.drv.drv, method_name, mocked_method)
-
-    def get_network_context(self, ten_id, net_id, net_name=None):
-        if not net_name:
-            net_name = 'test_network'
-        network = {'id': net_id,
-                   'tenant_id': ten_id,
-                   'name': net_name}
-        context = fake_network_context(ten_id, network, network)
-        net = {'network': network}
-        return context, net
 
     def get_subnet_context(self, ten_id, net_id, sub_id, sub_name=None):
         if not sub_name:

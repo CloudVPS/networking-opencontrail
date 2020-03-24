@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-
 from oslo_log import log as logging
 
 import networking_opencontrail.drivers.drv_opencontrail as drv
@@ -48,17 +47,27 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
     def initialize(self):
         utils.register_vnc_api_options()
-        tf_client = VncApiClient()
         tf_driver = drv.OpenContrailDrivers()
 
-        try:
-            repository.initialize()
-        except Exception as e:
-            LOG.warning("Exception: %s", str(e))
+        repository.initialize()
 
-        self.tf_client = tf_client
+        try:
+            repository.connect()
+        except repository.ConnectionError:
+            LOG.error(
+                "Error while connecting to Contrail."
+                "Check APISERVER config section.")
+
+        # This part is temporary while old architecture is supported
+        try:
+            tf_client = VncApiClient()
+            self.tf_client = tf_client
+            self.dm_integrator = dm_integrator.DeviceManagerIntegrator(
+                tf_client)
+        except Exception:
+            LOG.error("Connection error, restart neutron")
+
         self.drv = tf_driver
-        self.dm_integrator = dm_integrator.DeviceManagerIntegrator(tf_client)
         self.sg_handler = (
             opencontrail_sg_callback.OpenContrailSecurityGroupHandler(self))
         self.subnet_handler = (

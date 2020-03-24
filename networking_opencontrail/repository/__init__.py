@@ -12,11 +12,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+from requests.exceptions import ConnectionError
 
 from networking_opencontrail.repository.client import tf_client
+from networking_opencontrail.repository.initialize import connect
 from networking_opencontrail.repository.initialize import initialize
 from networking_opencontrail.repository import network
 from networking_opencontrail.repository.tag import ml2_tag_manager
 
 
-__all__ = ['initialize', 'network', 'tf_client', 'ml2_tag_manager']
+__all__ = [
+    'connect',
+    'initialize',
+    'network',
+    'tf_client',
+    'ml2_tag_manager',
+    'ConnectionError',
+]

@@ -16,6 +16,7 @@
 from oslo_log import log as logging
 
 from networking_opencontrail.repository.client import tf_client
+from networking_opencontrail.repository.initialize import reconnect
 from networking_opencontrail.repository.tag import ml2_tag_manager
 from networking_opencontrail.repository.utils import fetch_project
 from networking_opencontrail import resources
@@ -24,10 +25,12 @@ from networking_opencontrail import resources
 LOG = logging.getLogger(__name__)
 
 
+@reconnect
 def list_all():
     return tf_client.list_networks()
 
 
+@reconnect
 def create(q_network):
     project = fetch_project(q_network)
     network = resources.network.create(q_network=q_network,
@@ -38,6 +41,7 @@ def create(q_network):
     tf_client.create_network(network)
 
 
+@reconnect
 def update(old_q_network, q_network):
     project = fetch_project(old_q_network)
     old_network = resources.network.create(
@@ -48,6 +52,7 @@ def update(old_q_network, q_network):
     tf_client.update_network(network)
 
 
+@reconnect
 def delete(q_network):
     network_id = q_network['id']
 

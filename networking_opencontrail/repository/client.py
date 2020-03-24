@@ -94,5 +94,9 @@ class TFClient(object):
     def delete_network(self, network_id):
         self.session.virtual_network_delete(id=network_id)
 
+    @property
+    def connected(self):
+        return self.session is not None
+
 
 tf_client = TFClient()
