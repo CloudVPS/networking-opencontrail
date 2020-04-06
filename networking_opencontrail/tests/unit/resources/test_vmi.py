@@ -52,11 +52,11 @@ class VMIResourceTestCase(base.TestCase):
     def test_create(self):
         project = vnc_api.Project(name="project_name")
         project.set_uuid("project-uuid")
-        port = {"binding:host_id": "compute-node"}
+        node_name = "compute-node"
         network = vnc_api.VirtualNetwork(name="test-net", parent_obj=project)
         network.set_uuid("test-net-id")
 
-        vmi = create(port, network, project, 5)
+        vmi = create(node_name, network, project, 5)
 
         self.assertEqual(vmi.name, "vmi_test-net_compute-node")
         self.assertEqual(vmi.uuid, "bdf99a89-f0cd-3ffb-9bb8-6023bcd66f90")

@@ -24,9 +24,8 @@ REQUIRED_PORT_FIELDS = [
 ]
 
 
-def create(q_port, network, project, vlan_id):
-    fake_q_network = {'name': network.name}
-    name = make_name(q_port, fake_q_network)
+def create(node_name, network, project, vlan_id):
+    name = make_name(network.name, node_name)
     vmi = vnc_api.VirtualMachineInterface(name=name, parent_obj=project)
     vmi.set_uuid(utils.make_uuid(name))
 
@@ -57,8 +56,6 @@ def validate(q_port, q_network):
             "No VLAN ID set for network {}".format(q_network["name"]))
 
 
-def make_name(q_port, q_network):
-    network_name = q_network["name"]
-    host_id = q_port["binding:host_id"]
-    vmi_name = "vmi_{}_{}".format(network_name, host_id)
+def make_name(network_name, node_name):
+    vmi_name = "vmi_{}_{}".format(network_name, node_name)
     return vmi_name
