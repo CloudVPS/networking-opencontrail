@@ -49,7 +49,7 @@ def create(q_port, q_network):
 
     network = tf_client.read_network(uuid=q_network["id"])
     vlan_id = q_network.get("provider:segmentation_id")
-    _create_vmi(project, network, node_name, vlan_id)
+    create_from_tf_data(project, network, node_name, vlan_id)
 
 
 def delete(q_port, q_network, context):
@@ -78,7 +78,7 @@ def delete(q_port, q_network, context):
             "%s is not tagged with label=__ML2__ tag - skipping", vmi_name)
         return
 
-    _detach_from_vpg(vmi)
+    detach_from_vpg(vmi)
     tf_client.delete_vmi(uuid=vmi.uuid)
 
 
@@ -90,7 +90,7 @@ def vmi_exists(network_uuid, node_name):
     return bool(vmi)
 
 
-def _create_vmi(project, network, node_name, vlan_id):
+def create_from_tf_data(project, network, node_name, vlan_id):
     vmi = resources.vmi.create(project, network, node_name, vlan_id)
 
     ml2_tag_manager.tag(vmi)
@@ -109,7 +109,7 @@ def _attach_to_vpg(vmi, node_name):
     tf_client.update_vpg(vpg)
 
 
-def _detach_from_vpg(vmi):
+def detach_from_vpg(vmi):
     vpg_refs = vmi.get_virtual_port_group_back_refs()
     if not vpg_refs:
         return

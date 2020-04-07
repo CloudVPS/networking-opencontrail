@@ -29,16 +29,58 @@ LOG = logging.getLogger(__name__)
 
 @six.add_metaclass(abc.ABCMeta)
 class ResourceSynchronizer(object):
+    """Abstract Synchronizer class.
+
+    This class has properties that are used by all Synchronizers already
+    implemented. It also enforces synchronize() method implementation in all
+    children classes.
+    """
+
+    @abc.abstractmethod
+    def synchronize(self):
+        pass
+
+    @property
+    def _core_plugin(self):
+        return directory.get_plugin()
+
+    @property
+    def _context(self):
+        return context.get_admin_context()
+
+
+@six.add_metaclass(abc.ABCMeta)
+class OneToOneResourceSynchronizer(ResourceSynchronizer):
+    """A base one-to-one Synchronizer class.
+
+    It implements a concrete way of synchronizing resources, which is useful
+    when TF and Neutron resources correspond to each other (i.e. have the same
+    uuids). The synchronize() method calculates the diff between uuid lists
+    in TF and Neutron and uses resource-specific methods implemented by the
+    child classes to create/delete resources that are out-of-sync.
+    """
     def __init__(self):
         self.to_create = []
         self.to_delete = []
 
     def synchronize(self):
+        """Synchronize resources.
+
+        Call calculate_diff to prepare lists of uuids to be used by
+        resource-specific methods called after that.
+        """
         self.calculate_diff()
         self._delete_resources()
         self._create_resources()
 
     def calculate_diff(self):
+        """Calculate Neutron/TF resource diff.
+
+        Use resource-specific methods implemented by child classes to get
+        lists of given resources both from TF and Neutron. Compare the
+        lists and populate to_create and to_delete lists with objects that are
+        out of sync.
+        """
         tf_resources = self._get_tf_resources()
         neutron_resources = self._get_neutron_resources()
         neutron_res_ids = set(
@@ -119,32 +161,75 @@ class ResourceSynchronizer(object):
 
     @abc.abstractmethod
     def _get_tf_resources(self):
+        """Get a list of TF resources.
+
+        Child class should provide the implementation that returns a list
+        of TF resources.
+
+        :return: List of vnc_api objects
+        :rtype: list
+        """
         pass
 
     @abc.abstractmethod
     def _get_neutron_resources(self):
+        """Get a list of Neutron resources.
+
+        Child class should provide the implementation that returns a list
+        of Neutron resources.
+
+        :return: List of Neutron objects
+        :rtype: list
+        """
         pass
 
     @abc.abstractmethod
     def _create_resource(self, resource):
+        """Create a resource in TF.
+
+        Child class should provide the implementation that creates the
+        resource in TF database.
+
+        :param resource: Neutron resource to be created in TF
+        :type: dict
+        """
         pass
 
     @abc.abstractmethod
     def _delete_resource(self, resource_id):
+        """Delete resource from TF.
+
+        Child class should provide the implementation that deletes the
+        resource from TF database.
+
+        :param resource_id: Resource's UUID
+        :type: str
+        """
         pass
 
     @abc.abstractmethod
     def _ignore_neutron_resource(self, resource):
+        """Tell if Neutron resource should be ignored.
+
+        Child class should provide the implementation that allows certain
+        Neutron resources to be ignored during sync.
+
+        :param resource: Neutron resource
+        :type: dict
+        :return: True for each resource that needs to be ignored.
+        :rtype: bool
+        """
         pass
 
     @abc.abstractmethod
     def _ignore_tf_resource(self, resource):
+        """Tell if TF resource should be ignored.
+
+        Child class should provide the implementation that allows certain
+        TF resources to be ignored during sync.
+
+        :param resource: TF resource
+        :return: True for each resource that needs to be ignored.
+        :rtype: bool
+        """
         pass
-
-    @property
-    def _core_plugin(self):
-        return directory.get_plugin()
-
-    @property
-    def _context(self):
-        return context.get_admin_context()

@@ -18,33 +18,38 @@ from networking_opencontrail.tests import base
 from vnc_api import vnc_api
 
 from networking_opencontrail.resources.vmi import create
+from networking_opencontrail.resources.vmi import make_name
+from networking_opencontrail.resources.vmi import unzip_name
 from networking_opencontrail.resources.vmi import validate
 
 
 PORT_VALID = {
     "device_owner": "compute:test-nova",
     "binding:host_id": "compute-node",
-    "network_id": "test-net-id"
+    "network_id": "test-valid-net-id"
 }
 PORT_INVALID_DEVICE_OWNER = {
     "device_owner": "not-compute:test-nova",
     "binding:host_id": "compute-node",
-    "network_id": "test-net-id"
+    "network_id": "test-valid-net-id"
 }
 PORT_NO_HOST_ID = {
     "device_owner": "compute:test-nova",
-    "network_id": "test-net-id"
+    "network_id": "test-valid-net-id"
 }
 PORT_NO_NETWORK_ID = {
     "device_owner": "compute:test-nova",
     "binding:host_id": "compute-node",
 }
+
 NETWORK_VALID = {
-    "name": "test-net",
+    "name": "test-valid-net",
+    "id": "test-valid-net-id",
     "provider:segmentation_id": 5,
 }
 NETWORK_NO_VLAN_ID = {
-    "name": "test-net",
+    "name": "test-net-no-vlan",
+    "id": "test-net-no-vlan-id",
 }
 
 
@@ -84,3 +89,14 @@ class VMIResourceTestCase(base.TestCase):
 
     def test_validate(self):
         self.assertIsNone(validate(PORT_VALID, NETWORK_VALID))
+
+    def test_unzip_name(self):
+        expected_network_uuid = 'my_n3twork-id'
+        expected_node_name = 'my-n0de'
+
+        vmi_name = make_name(
+            expected_network_uuid, expected_node_name)
+        network_uuid, node_name = unzip_name(vmi_name)
+
+        self.assertEqual(network_uuid, expected_network_uuid)
+        self.assertEqual(node_name, expected_node_name)

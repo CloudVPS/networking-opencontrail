@@ -14,7 +14,9 @@
 
 from retrying import retry
 
-from networking_opencontrail.tests.base import IntegrationTestCase
+from networking_opencontrail.common import utils
+from networking_opencontrail import resources
+from networking_opencontrail.tests.base import FabricTestCase
 
 from vnc_api import vnc_api
 
@@ -27,49 +29,12 @@ def retry_if_not_none(result):
     return result is not None
 
 
-class TestNetworkSynchronization(IntegrationTestCase):
+class SynchronizationTestCase(FabricTestCase):
     def setUp(self):
-        super(TestNetworkSynchronization, self).setUp()
-
+        super(SynchronizationTestCase, self).setUp()
         self.ml2_tag = self.tf_list(
             'tag', detail=True, fq_names=[["label=__ML2__"]]
         )[0]
-
-    def test_network_recreate(self):
-        net = {
-            "name": "test_vlan_network",
-            "provider:network_type": "vlan",
-            'provider:segmentation_id': 20,
-            "provider:physical_network": self.provider,
-            "admin_state_up": True,
-        }
-        q_net = self.q_create_network(**net)
-
-        self.tf_delete("virtual-network", q_net["network"]["id"])
-
-        self.assertIsNotNone(
-            self._get_recreated_resource(
-                "virtual-network", q_net["network"]["id"]
-            )
-        )
-
-    def test_network_redelete(self):
-        network_1 = vnc_api.VirtualNetwork(
-            name="test_network_1", parent_obj=self.tf_project
-        )
-        network_2 = vnc_api.VirtualNetwork(
-            name="test_network_2", parent_obj=self.tf_project
-        )
-
-        network_1.add_tag(self.ml2_tag)
-
-        network_1_uuid = self.tf_create(network_1)
-        network_2_uuid = self.tf_create(network_2)
-
-        self.assertIsNone(
-            self._get_redeleted_resource("virtual-network", network_1_uuid)
-        )
-        self.assertIsNotNone(self.tf_get("virtual-network", network_2_uuid))
 
     @retry(
         retry_on_result=retry_if_none,
@@ -86,3 +51,269 @@ class TestNetworkSynchronization(IntegrationTestCase):
     )
     def _get_redeleted_resource(self, res_type, res_id):
         return self.tf_get(res_type, res_id)
+
+
+class TestNetworkSynchronization(SynchronizationTestCase):
+    """Following scenarios are tested:
+
+    1. Test if network is recreated properly:
+        - Create a test network in Neutron.
+        - Corresponding network should be created in TF.
+        - Delete the network from TF manually.
+        - Check if the network was recreated in TF.
+
+    2. Test if stale network is deleted properly:
+        - Create a test network in TF.
+        - Since it doesn't correspond to any network in Neutron, it will be
+            considered 'stale' by the Synchronizer.
+        - Check if the network was deleted in TF.
+    """
+    def test_recreate(self):
+        net = {
+            "name": "test_vlan_network",
+            "provider:network_type": "vlan",
+            'provider:segmentation_id': 20,
+            "provider:physical_network": self.provider,
+            "admin_state_up": True,
+        }
+        q_net = self.q_create_network(**net)
+
+        self.tf_delete("virtual-network", q_net["network"]["id"])
+
+        self.assertIsNotNone(
+            self._get_recreated_resource(
+                "virtual-network", q_net["network"]["id"]))
+
+    def test_redelete(self):
+        tagged_network = vnc_api.VirtualNetwork(
+            name="test_network_1", parent_obj=self.tf_project)
+        tagged_network.add_tag(self.ml2_tag)
+        tagged_network_uuid = self.tf_create(tagged_network)
+
+        untagged_network = vnc_api.VirtualNetwork(
+            name="test_network_2", parent_obj=self.tf_project)
+        untagged_network_uuid = self.tf_create(untagged_network)
+
+        self.assertIsNone(
+            self._get_redeleted_resource(
+                "virtual-network", tagged_network_uuid))
+        self.assertIsNotNone(
+            self.tf_get("virtual-network", untagged_network_uuid))
+
+
+class TestVPGSynchronization(SynchronizationTestCase):
+    """Following scenarios are tested:
+
+    1. Test if VPG is recreated properly:
+        - Create a test port in Neutron.
+        - Corresponding VPG should be created in TF.
+        - Delete the VPG from TF manually.
+        - Check if the VPG was recreated in TF.
+
+    2. Test if stale VPG is deleted properly:
+        - Create a test VPG in TF.
+        - Since it doesn't correspond to any port in Neutron, it will be
+            considered 'stale' by the Synchronizer.
+        - Check if the VPG was deleted in TF.
+    """
+    def test_recreate(self):
+        port = {
+            "name": "test_fabric_port",
+            "network_id": self.test_network["network"]["id"],
+            "binding:host_id": "compute-node",
+            "device_owner": "compute:fake-nova"
+        }
+        self.q_create_port(**port)
+
+        vmi_name = resources.vmi.make_name(
+            self.test_network["network"]["id"],
+            'compute-node')
+        vmi_uuid = self._find_vmi(vmi_name)
+        vmi = self.tf_get("virtual-machine-interface", vmi_uuid)
+        vpg = self.tf_get(
+            "virtual-port-group",
+            vmi.get_virtual_port_group_back_refs()[0]["uuid"])
+        vpg_uuid = utils.make_uuid(vpg.name)
+
+        vpg.del_virtual_machine_interface(vmi)
+        self.tf_update(vpg)
+        self.tf_delete("virtual-port-group", vpg_uuid)
+
+        vpg = self._get_recreated_resource(
+            "virtual-port-group", vpg_uuid)
+        self.assertIsNotNone(vpg)
+
+        vmi_refs = vpg.get_virtual_machine_interface_refs()
+        self.assertEqual(1, len(vmi_refs))
+        self.assertEqual(vmi_uuid, vmi_refs[0]["uuid"])
+
+    def test_redelete(self):
+        tagged_vpg_name = resources.vpg.make_name('compute-node')
+        tagged_vpg = vnc_api.VirtualPortGroup(
+            name=tagged_vpg_name, parent_obj=self.tf_project)
+        tagged_vpg.add_tag(self.ml2_tag)
+        tagged_vpg.set_uuid(utils.make_uuid(tagged_vpg_name))
+        self.tf_create(tagged_vpg)
+
+        untagged_vpg_name = resources.vpg.make_name('compute-2')
+        untagged_vpg = vnc_api.VirtualPortGroup(
+            name=untagged_vpg_name, parent_obj=self.tf_project)
+        untagged_vpg.set_uuid(utils.make_uuid(untagged_vpg_name))
+        self.tf_create(untagged_vpg)
+
+        self.assertIsNone(
+            self._get_redeleted_resource(
+                "virtual-port-group", tagged_vpg.uuid))
+        self.assertIsNotNone(
+            self.tf_get(
+                "virtual-port-group", untagged_vpg.uuid))
+
+
+class TestVMISynchronization(SynchronizationTestCase):
+    """Following scenarios are tested:
+
+    1. Test if VMI is recreated properly:
+        - Create a test port in Neutron.
+        - Corresponding VMI should be created in TF.
+        - Delete the VMI from TF manually.
+        - Check if the VMI was recreated in TF.
+
+    2. Test if stale VMI is deleted properly:
+        - Create a test VMI in TF.
+        - Since it doesn't correspond to any port in Neutron, it will be
+            considered 'stale' by the Synchronizer.
+        - Check if the VMI was deleted in TF.
+    """
+    def test_recreate(self):
+        port = {
+            "name": "test_fabric_port",
+            "network_id": self.test_network["network"]["id"],
+            "binding:host_id": "compute-node",
+            "device_owner": "compute:fake-nova"
+        }
+        self.q_create_port(**port)
+
+        vmi_name = resources.vmi.make_name(
+            self.test_network["network"]["id"],
+            'compute-node')
+        vmi_uuid = self._find_vmi(vmi_name)
+        vmi = self.tf_get("virtual-machine-interface", vmi_uuid)
+        vpg = self.tf_get(
+            "virtual-port-group",
+            vmi.get_virtual_port_group_back_refs()[0]["uuid"])
+
+        vpg.del_virtual_machine_interface(vmi)
+        self.tf_update(vpg)
+        self.tf_delete("virtual-machine-interface", vmi_uuid)
+
+        vmi = self._get_recreated_resource(
+            "virtual-machine-interface", vmi_uuid)
+        self.assertIsNotNone(vmi)
+        self._assert_dm_vmi(
+            vmi_uuid, self.test_network['network']['id'], self.vlan_id)
+
+    def test_redelete(self):
+        network = vnc_api.VirtualNetwork(
+            name="test_network", parent_obj=self.tf_project)
+        self.tf_create(network)
+
+        tagged_vmi_name = resources.vmi.make_name(network.uuid, 'compute-node')
+        tagged_vmi = vnc_api.VirtualMachineInterface(
+            name=tagged_vmi_name, parent_obj=self.tf_project)
+        tagged_vmi.add_tag(self.ml2_tag)
+        tagged_vmi.set_uuid(utils.make_uuid(tagged_vmi_name))
+        tagged_vmi.add_virtual_network(network)
+        self.tf_create(tagged_vmi)
+
+        untagged_vmi_name = resources.vmi.make_name(network.uuid, 'compute-2')
+        untagged_vmi = vnc_api.VirtualMachineInterface(
+            name=untagged_vmi_name, parent_obj=self.tf_project)
+        untagged_vmi.set_uuid(utils.make_uuid(untagged_vmi_name))
+        untagged_vmi.add_virtual_network(network)
+        self.tf_create(untagged_vmi)
+
+        self.assertIsNone(
+            self._get_redeleted_resource(
+                "virtual-machine-interface", tagged_vmi.uuid))
+        self.assertIsNotNone(
+            self.tf_get(
+                "virtual-machine-interface", untagged_vmi.uuid))
+
+
+class TestVPGAndVMISynchronization(SynchronizationTestCase):
+    """Following scenarios are tested:
+
+    1. Test if VPG/VMI pair is recreated properly:
+        - Create a test port in Neutron.
+        - Corresponding VPG/VMI pair should be created in TF.
+        - Delete the VPG/VMI pair from TF manually.
+        - Check if the VPG/VMI pair was recreated in TF.
+
+    2. Test if stale VPG/VMI pair is deleted properly:
+        - Create a test VPG/VMI pair in TF.
+        - Since it doesn't correspond to any port in Neutron, it will be
+            considered 'stale' by the Synchronizer.
+        - Check if the VPG/VMI pair was deleted in TF.
+    """
+    def test_recreate(self):
+        port = {
+            "name": "test_fabric_port",
+            "network_id": self.test_network["network"]["id"],
+            "binding:host_id": "compute-node",
+            "device_owner": "compute:fake-nova"
+        }
+        self.q_create_port(**port)
+
+        vmi_name = resources.vmi.make_name(
+            self.test_network["network"]["id"], 'compute-node')
+        vmi_uuid = self._find_vmi(vmi_name)
+        vmi = self.tf_get("virtual-machine-interface", vmi_uuid)
+        vpg = self.tf_get(
+            "virtual-port-group",
+            vmi.get_virtual_port_group_back_refs()[0]["uuid"])
+        vpg_uuid = utils.make_uuid(vpg.name)
+
+        vpg.del_virtual_machine_interface(vmi)
+        self.tf_update(vpg)
+        self.tf_delete("virtual-port-group", vpg_uuid)
+        self.tf_delete("virtual-machine-interface", vmi_uuid)
+
+        vmi = self._get_recreated_resource(
+            "virtual-machine-interface", vmi_uuid)
+        self.assertIsNotNone(vmi)
+
+        vpg = self._get_recreated_resource(
+            "virtual-port-group", vpg_uuid)
+        self.assertIsNotNone(vpg)
+        vmi_refs = vpg.get_virtual_machine_interface_refs()
+        self.assertEqual(1, len(vmi_refs))
+        self.assertEqual(vmi_uuid, vmi_refs[0]["uuid"])
+        self._assert_dm_vmi(
+            vmi_uuid, self.test_network['network']['id'], self.vlan_id)
+
+    def test_redelete(self):
+        network = vnc_api.VirtualNetwork(
+            name="test_network", parent_obj=self.tf_project)
+        self.tf_create(network)
+
+        vmi_name = resources.vmi.make_name(network.uuid, 'compute-node')
+        vmi = vnc_api.VirtualMachineInterface(
+            name=vmi_name, parent_obj=self.tf_project)
+        vmi.add_tag(self.ml2_tag)
+        vmi.set_uuid(utils.make_uuid(vmi_name))
+        vmi.add_virtual_network(network)
+        self.tf_create(vmi)
+
+        vpg_name = resources.vpg.make_name('compute-node')
+        vpg = vnc_api.VirtualPortGroup(
+            name=vpg_name, parent_obj=self.tf_project)
+        vpg.add_tag(self.ml2_tag)
+        vpg.add_virtual_machine_interface(vmi)
+        vpg.set_uuid(utils.make_uuid(vpg_name))
+        self.tf_create(vpg)
+
+        self.assertIsNone(
+            self._get_redeleted_resource(
+                "virtual-machine-interface", vmi.uuid))
+        self.assertIsNone(
+            self._get_redeleted_resource("virtual-port-group", vpg.uuid))

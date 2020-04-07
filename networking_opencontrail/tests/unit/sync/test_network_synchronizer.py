@@ -72,7 +72,7 @@ class NetworkSynchronizerTestCase(base.TestCase):
             n_network_2,
             n_network_snat,
         ]
-        repository.network.list_all.return_value = [
+        repository.tf_client.list_networks.return_value = [
             tf_network_1,
             tf_network_3,
             tf_network_ignore,

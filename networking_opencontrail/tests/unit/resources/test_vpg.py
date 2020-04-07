@@ -18,15 +18,10 @@ from vnc_api import vnc_api
 
 from networking_opencontrail.resources.vpg import create
 from networking_opencontrail.resources.vpg import make_name
+from networking_opencontrail.resources.vpg import unzip_name
 
 
 class VPGResourceTestCase(base.TestCase):
-
-    def test_make_name(self):
-        node = vnc_api.Node(name='test-node.novalocal')
-        vpg_name = make_name(node.name)
-
-        self.assertEqual(vpg_name, 'vpg#test-node.novalocal')
 
     def test_create(self):
         domain = vnc_api.Domain(name='test-domain')
@@ -56,3 +51,17 @@ class VPGResourceTestCase(base.TestCase):
 
         self.assertEqual(
             vpg.physical_interface_refs, expected_physical_interface_refs)
+
+    def test_make_name(self):
+        node = vnc_api.Node(name='test-node.novalocal')
+        vpg_name = make_name(node.name)
+
+        self.assertEqual(vpg_name, 'vpg#test-node.novalocal')
+
+    def test_unzip_name(self):
+        expected_node_name = 'my-n0de_'
+
+        vmi_name = make_name(expected_node_name)
+        node_name = unzip_name(vmi_name)
+
+        self.assertEqual(node_name, expected_node_name)

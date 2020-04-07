@@ -80,5 +80,5 @@ def vnc_api_is_authenticated():
         response.raise_for_status()
 
 
-def make_uuid(resource_name):
-    return str(uuid.uuid3(uuid.NAMESPACE_DNS, resource_name))
+def make_uuid(name):
+    return str(uuid.uuid3(uuid.NAMESPACE_DNS, str(name)))

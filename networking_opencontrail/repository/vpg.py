@@ -34,12 +34,13 @@ def create(q_port, q_network):
         return
 
     node = utils.request_node(q_port)
-    vpg = _read_vpg(node)
+    vpg = _read_from_node(node)
     if vpg:
         LOG.info("VPG for port %s already exists", q_port["id"])
         return
 
-    _create_vpg(node)
+    vpg = create_from_node(node)
+    return vpg
 
 
 def delete(q_port, q_network):
@@ -51,7 +52,7 @@ def delete(q_port, q_network):
         return
 
     node = utils.request_node(q_port)
-    vpg = _read_vpg(node)
+    vpg = _read_from_node(node)
     if not vpg:
         LOG.error("Couldn't find VPG for q_port %s", q_port["id"])
         return
@@ -69,7 +70,7 @@ def delete(q_port, q_network):
     tf_client.delete_vpg(uuid=vpg.uuid)
 
 
-def _read_vpg(node):
+def _read_from_node(node):
     vpg_name = resources.vpg.make_name(node.name)
     vpg_uuid = make_uuid(vpg_name)
     vpg = tf_client.read_vpg(uuid=vpg_uuid)
@@ -77,7 +78,7 @@ def _read_vpg(node):
     return vpg
 
 
-def _create_vpg(node):
+def create_from_node(node):
     physical_interfaces = utils.request_physical_interfaces_from_node(node)
     fabric = utils.request_fabric_from_node(node)
     if not fabric:
@@ -88,6 +89,7 @@ def _create_vpg(node):
     ml2_tag_manager.tag(vpg)
 
     tf_client.create_vpg(vpg)
+    return vpg
 
 
 def _delete_vpg(node):

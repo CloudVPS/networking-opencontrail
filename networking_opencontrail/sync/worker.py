@@ -21,7 +21,7 @@ from neutron_lib.plugins import directory
 from neutron_lib import worker
 
 from networking_opencontrail import repository
-from networking_opencontrail.sync.synchronizers import NetworkSynchronizer
+from networking_opencontrail.sync import synchronizers
 
 from oslo_log import log as logging
 
@@ -34,7 +34,8 @@ class TFSyncWorker(worker.BaseWorker):
         super(TFSyncWorker, self).__init__()
         self.device_types_to_omit = device_types_to_omit
         self.synchronizers = [
-            NetworkSynchronizer(),
+            synchronizers.NetworkSynchronizer(),
+            synchronizers.VPGAndVMISynchronizer(),
         ]
         self._thread = None
         self._running = False
