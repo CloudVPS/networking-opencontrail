@@ -40,16 +40,16 @@ def create(q_port, q_network):
         LOG.debug(e)
         return
 
-    if vmi_exists(q_port, q_network):
+    project = request_project(q_network)
+    node_name = q_port['binding:host_id']
+    network_uuid = q_network['id']
+    if vmi_exists(network_uuid, node_name):
         LOG.info("VMI for port %s already exists", q_port["id"])
         return
 
-    node_name = q_port['binding:host_id']
     network = tf_client.read_network(uuid=q_network["id"])
-    project = request_project(q_network)
     vlan_id = q_network.get("provider:segmentation_id")
-
-    _create_vmi(node_name, network, project, vlan_id)
+    _create_vmi(project, network, node_name, vlan_id)
 
 
 def delete(q_port, q_network, context):
@@ -60,9 +60,9 @@ def delete(q_port, q_network, context):
         LOG.debug(e)
         return
 
+    network_uuid = q_network['id']
     node_name = q_port['binding:host_id']
-    network_name = q_network['name']
-    vmi_name = resources.vmi.make_name(network_name, node_name)
+    vmi_name = resources.vmi.make_name(network_uuid, node_name)
     if _vmi_should_exist(q_port, q_network, context):
         LOG.info("%s should exists - skipping", vmi_name)
         return
@@ -82,18 +82,16 @@ def delete(q_port, q_network, context):
     tf_client.delete_vmi(uuid=vmi.uuid)
 
 
-def vmi_exists(q_port, q_network):
-    node_name = q_port['binding:host_id']
-    network_name = q_network['name']
-    vmi_name = resources.vmi.make_name(network_name, node_name)
+def vmi_exists(network_uuid, node_name):
+    vmi_name = resources.vmi.make_name(network_uuid, node_name)
     vmi_uuid = utils.make_uuid(vmi_name)
     vmi = tf_client.read_vmi(uuid=vmi_uuid)
 
     return bool(vmi)
 
 
-def _create_vmi(node_name, network, project, vlan_id):
-    vmi = resources.vmi.create(node_name, network, project, vlan_id)
+def _create_vmi(project, network, node_name, vlan_id):
+    vmi = resources.vmi.create(project, network, node_name, vlan_id)
 
     ml2_tag_manager.tag(vmi)
 
@@ -105,7 +103,6 @@ def _create_vmi(node_name, network, project, vlan_id):
 def _attach_to_vpg(vmi, node_name):
     vpg_name = resources.vpg.make_name(node_name)
     vpg_uuid = utils.make_uuid(vpg_name)
-
     vpg = tf_client.read_vpg(uuid=vpg_uuid)
 
     vpg.add_virtual_machine_interface(vmi)

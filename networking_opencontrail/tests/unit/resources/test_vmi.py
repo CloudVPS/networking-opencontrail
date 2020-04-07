@@ -20,6 +20,7 @@ from vnc_api import vnc_api
 from networking_opencontrail.resources.vmi import create
 from networking_opencontrail.resources.vmi import validate
 
+
 PORT_VALID = {
     "device_owner": "compute:test-nova",
     "binding:host_id": "compute-node",
@@ -56,10 +57,10 @@ class VMIResourceTestCase(base.TestCase):
         network = vnc_api.VirtualNetwork(name="test-net", parent_obj=project)
         network.set_uuid("test-net-id")
 
-        vmi = create(node_name, network, project, 5)
+        vmi = create(project, network, node_name, 5)
 
-        self.assertEqual(vmi.name, "vmi_test-net_compute-node")
-        self.assertEqual(vmi.uuid, "bdf99a89-f0cd-3ffb-9bb8-6023bcd66f90")
+        self.assertEqual(vmi.name, "vmi#test-net-id#compute-node")
+        self.assertEqual(vmi.uuid, "e208b554-1147-38d3-870e-92a22dab524c")
         self.assertEqual(vmi.parent_name, project.name)
         self.assertEqual(
             vmi.virtual_machine_interface_properties.sub_interface_vlan_tag, 5

@@ -17,7 +17,6 @@ from networking_opencontrail.tests import base
 from vnc_api import vnc_api
 
 from networking_opencontrail.resources.vpg import create
-from networking_opencontrail.resources.vpg import make_fq_name
 from networking_opencontrail.resources.vpg import make_name
 
 
@@ -27,24 +26,11 @@ class VPGResourceTestCase(base.TestCase):
         node = vnc_api.Node(name='test-node.novalocal')
         vpg_name = make_name(node.name)
 
-        self.assertEqual(vpg_name, 'vpg_test-node.novalocal')
-
-    def test_make_fq_name(self):
-        domain = vnc_api.Domain(name='test-domain')
-        project = vnc_api.Project(name='test-project', parent_obj=domain)
-        node = vnc_api.Node(name='test-node', parent_obj=domain)
-        vpg_fq_name = make_fq_name(node, project)
-
-        expected_vpg_fq_name = [
-            'test-domain',
-            'test-project',
-            'vpg_test-node'
-        ]
-        self.assertEqual(vpg_fq_name, expected_vpg_fq_name)
+        self.assertEqual(vpg_name, 'vpg#test-node.novalocal')
 
     def test_create(self):
         domain = vnc_api.Domain(name='test-domain')
-        project = vnc_api.Project(name='test-project', parent_obj=domain)
+        fabric = vnc_api.Fabric(name='test-fabric', parent_obj=domain)
         node = vnc_api.Node(name='test-node', parent_obj=domain)
         pr = vnc_api.PhysicalRouter(name='test-pr', parent_obj=domain)
         physical_interfaces = [
@@ -56,11 +42,10 @@ class VPGResourceTestCase(base.TestCase):
         vpg = create(
             node=node,
             physical_interfaces=physical_interfaces,
-            project=project
+            fabric=fabric
         )
         self.assertEqual(vpg.name, make_name(node.name))
-        self.assertEqual(vpg.fq_name, make_fq_name(node=node, project=project))
-        self.assertEqual(vpg.parent_name, project.name)
+        self.assertEqual(vpg.parent_name, fabric.name)
         self.assertEqual(vpg.id_perms, vnc_api.IdPermsType(enable=True))
 
         expected_physical_interface_refs = []

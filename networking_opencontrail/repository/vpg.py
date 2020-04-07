@@ -15,6 +15,7 @@
 
 from oslo_log import log as logging
 
+from networking_opencontrail.common.utils import make_uuid
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.tag import ml2_tag_manager
 from networking_opencontrail.repository.utils import utils
@@ -33,14 +34,12 @@ def create(q_port, q_network):
         return
 
     node = utils.request_node(q_port)
-    project = utils.request_project(q_port)
-
-    vpg = _read_vpg(node, project)
+    vpg = _read_vpg(node)
     if vpg:
         LOG.info("VPG for port %s already exists", q_port["id"])
         return
 
-    _create_vpg(node, project)
+    _create_vpg(node)
 
 
 def delete(q_port, q_network):
@@ -52,9 +51,7 @@ def delete(q_port, q_network):
         return
 
     node = utils.request_node(q_port)
-    project = utils.request_project(q_port)
-
-    vpg = _read_vpg(node, project)
+    vpg = _read_vpg(node)
     if not vpg:
         LOG.error("Couldn't find VPG for q_port %s", q_port["id"])
         return
@@ -72,23 +69,29 @@ def delete(q_port, q_network):
     tf_client.delete_vpg(uuid=vpg.uuid)
 
 
-def _read_vpg(node, project):
-    vpg_fq_name = resources.vpg.make_fq_name(node, project)
-    vpg = tf_client.read_vpg(fq_name=vpg_fq_name)
+def _read_vpg(node):
+    vpg_name = resources.vpg.make_name(node.name)
+    vpg_uuid = make_uuid(vpg_name)
+    vpg = tf_client.read_vpg(uuid=vpg_uuid)
 
     return vpg
 
 
-def _create_vpg(node, project):
+def _create_vpg(node):
     physical_interfaces = utils.request_physical_interfaces_from_node(node)
+    fabric = utils.request_fabric_from_node(node)
+    if not fabric:
+        LOG.error("Couldn't find fabric for VPG")
+        return
 
-    vpg = resources.vpg.create(node, physical_interfaces, project)
+    vpg = resources.vpg.create(node, physical_interfaces, fabric)
     ml2_tag_manager.tag(vpg)
 
     tf_client.create_vpg(vpg)
 
 
-def _delete_vpg(node, project):
-    vpg_fq_name = resources.vpg.make_fq_name(node, project)
+def _delete_vpg(node):
+    vpg_name = resources.vpg.make_name(node)
+    vpg_uuid = make_uuid(vpg_name)
 
-    tf_client.delete_vpg(fq_name=vpg_fq_name)
+    tf_client.delete_vpg(uuid=vpg_uuid)

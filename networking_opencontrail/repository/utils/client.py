@@ -145,9 +145,21 @@ class TFClient(object):
         except vnc_api.NoIdError:
             return None
 
+    def read_physical_router(self, uuid=None, fq_name=None):
+        try:
+            return self.session.physical_router_read(id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            return None
+
     def read_node(self, uuid=None, fq_name=None):
         try:
             return self.session.node_read(id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            return None
+
+    def read_fabric(self, uuid=None, fq_name=None):
+        try:
+            return self.session.fabric_read(id=uuid, fq_name=fq_name)
         except vnc_api.NoIdError:
             return None
 

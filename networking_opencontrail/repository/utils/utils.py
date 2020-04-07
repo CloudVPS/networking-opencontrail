@@ -84,3 +84,34 @@ def request_physical_interfaces_from_node(node):
     physical_interfaces = request_physical_interfaces_from_ports(ports)
 
     return physical_interfaces
+
+
+def request_fabric_from_physical_interface(physical_interface):
+    physical_router_fq_name = physical_interface.fq_name[:-1]
+    physical_router = tf_client.read_physical_router(
+        fq_name=physical_router_fq_name)
+    fabric_refs = physical_router.fabric_refs
+    if not fabric_refs:
+        return None
+
+    fabric_ref = fabric_refs[0]
+    fabric_uuid = fabric_ref['uuid']
+    fabric = tf_client.read_fabric(uuid=fabric_uuid)
+
+    return fabric
+
+
+def request_fabric_from_node(node):
+    ports = request_ports_from_node(node)
+    if not ports:
+        return None
+
+    port = ports[0]
+    physical_interfaces = request_physical_interfaces_from_port(port)
+    if not physical_interfaces:
+        return None
+
+    physical_interface = physical_interfaces[0]
+    fabric = request_fabric_from_physical_interface(physical_interface)
+
+    return fabric

@@ -17,6 +17,8 @@ import ddt
 
 from vnc_api import vnc_api
 
+from networking_opencontrail.common import utils
+from networking_opencontrail import resources
 from networking_opencontrail.tests.base import IntegrationTestCase
 
 
@@ -65,11 +67,15 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'tenant_id': self.project.id}
         self.q_create_port(**port)
-        vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
 
-        vmi_uuid = self._find_vmi(vmi_name)
+        vmi_name = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-node'
+        )
+        vmi_uuid = utils.make_uuid(vmi_name)
         self._assert_dm_vmi(vmi_uuid,
                             self.test_network['network']['id'],
                             self.vlan_id)
@@ -78,7 +84,8 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'tenant_id': self.project.id}
         self.q_create_port(**port)
 
         port.update({'device_id': 'vm-2',
@@ -89,9 +96,12 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         expected_bindings = [('compute-node', [('qfx-test-1', 'xe-0/0/0')]),
                              ('compute-2', [('qfx-test-2', 'xe-0/0/0'),
                                             ('qfx-test-2', 'xe-1/1/1')])]
-        for compute_name, physical_interfaces in expected_bindings:
-            vmi_name = self._make_vmi_name(self.test_network, compute_name)
-            vmi_uuid = self._find_vmi(vmi_name)
+        for node_name, physical_interfaces in expected_bindings:
+            vmi_name = resources.vmi.make_name(
+                self.test_network['network']['id'],
+                node_name
+            )
+            vmi_uuid = utils.make_uuid(vmi_name)
             self._assert_dm_vmi(vmi_uuid,
                                 self.test_network['network']['id'],
                                 self.vlan_id)
@@ -105,27 +115,35 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_owner': 'not-compute:fake'}
+                'device_owner': 'not-compute:fake',
+                'tenant_id': self.project.id}
         self.q_create_port(**port)
 
-        vmi_name = self._make_vmi_name(self.test_network,
-                                       port['binding:host_id'])
+        vmi_name = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-node'
+        )
         vmi_uuid = self._find_vmi(vmi_name)
         self.assertIsNone(vmi_uuid)
 
     def test_create_port_in_non_vlan_network(self):
         net = {'name': 'test_notvlan_network',
                'admin_state_up': True,
-               'provider:network_type': 'local'}
+               'provider:network_type': 'local',
+               'tenant_id': self.project.id}
         network = self.q_create_network(**net)
 
         port = {'name': 'test_fabric_port',
                 'network_id': network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'tenant_id': self.project.id}
         self.q_create_port(**port)
-        vmi_name = self._make_vmi_name(network, 'compute-node')
 
+        vmi_name = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-node'
+        )
         vmi_uuid = self._find_vmi(vmi_name)
         self.assertIsNone(vmi_uuid)
 
@@ -133,10 +151,14 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'tenant_id': self.project.id}
         q_port = self.q_create_port(**port)
-        vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
 
+        vmi_name = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-node'
+        )
         vmi_uuid = self._find_vmi(vmi_name)
         self._assert_dm_vmi(vmi_uuid,
                             self.test_network['network']['id'],
@@ -145,7 +167,10 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         self.q_update_port(q_port, **{'binding:host_id': 'compute-2'})
 
         self.assertIsNone(self._find_vmi(vmi_name))
-        vmi_name_2 = self._make_vmi_name(self.test_network, 'compute-2')
+        vmi_name_2 = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-2'
+        )
         vmi_uuid_2 = self._find_vmi(vmi_name_2)
         self._assert_dm_vmi(vmi_uuid_2,
                             self.test_network['network']['id'],
@@ -155,10 +180,14 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         port = {'name': 'test_fabric_port',
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'tenant_id': self.project.id}
         q_port = self.q_create_port(**port)
-        vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
 
+        vmi_name = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-node'
+        )
         vmi_uuid = self._find_vmi(vmi_name)
         self._assert_dm_vmi(vmi_uuid,
                             self.test_network['network']['id'],
@@ -175,20 +204,25 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         self._assert_vpg_deleted_or_not_ref(vpg_uuid, vmi_uuid)
 
     def test_delete_last_port(self):
-        port = {'name': 'test_fabric_port',
-                'network_id': self.test_network['network']['id'],
-                'binding:host_id': 'compute-node',
-                'device_id': 'vm-1',
-                'device_owner': 'compute:fake-nova'}
-        port = self.q_create_port(**port)
-        vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
+        q_port = {'name': 'test_fabric_port',
+                  'network_id': self.test_network['network']['id'],
+                  'binding:host_id': 'compute-node',
+                  'device_id': 'vm-1',
+                  'device_owner': 'compute:fake-nova',
+                  'tenant_id': self.project.id}
+        q_port = self.q_create_port(**q_port)
+
+        vmi_name = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-node'
+        )
         vmi_uuid = self._find_vmi(vmi_name)
         self.assertIsNotNone(vmi_uuid)
 
         vmi = self.tf_get('virtual-machine-interface', vmi_uuid)
         vpg_uuid = vmi.get_virtual_port_group_back_refs()[0]['uuid']
 
-        self.q_delete_port(port)
+        self.q_delete_port(q_port)
 
         self.assertIsNone(self._find_vmi(vmi_name))
         self._assert_vpg_deleted_or_not_ref(vpg_uuid, vmi_uuid)
@@ -198,13 +232,17 @@ class TestVPGsAndVMIs(IntegrationTestCase):
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
                 'device_id': 'vm-1',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'tenant_id': self.project.id}
         q_port = self.q_create_port(**port)
 
         port.update({'device_id': 'vm-2'})
         self.q_create_port(**port)
 
-        vmi_name = self._make_vmi_name(self.test_network, 'compute-node')
+        vmi_name = resources.vmi.make_name(
+            self.test_network['network']['id'],
+            'compute-node'
+        )
         self.assertIsNotNone(self._find_vmi(vmi_name))
 
         self.q_delete_port(q_port)
@@ -222,7 +260,8 @@ class TestVPGsAndVMIs(IntegrationTestCase):
                 'network_id': self.test_network['network']['id'],
                 'binding:host_id': 'compute-node',
                 'device_id': 'vm-1',
-                'device_owner': 'compute:fake-nova'}
+                'device_owner': 'compute:fake-nova',
+                'tenant_id': self.project.id}
         self.q_create_port(**port)
 
         port.update({'device_id': 'vm-2'})
@@ -237,8 +276,11 @@ class TestVPGsAndVMIs(IntegrationTestCase):
         vpg_uuids = set()
         expected_bindings = [(self.test_network, self.vlan_id, 'compute-node'),
                              (network_2, vlan_2, 'compute-node')]
-        for network, vlan_id, compute_name in expected_bindings:
-            vmi_name = self._make_vmi_name(network, compute_name)
+        for network, vlan_id, node_name in expected_bindings:
+            vmi_name = resources.vmi.make_name(
+                network['network']['id'],
+                node_name
+            )
             vmi_uuid = self._find_vmi(vmi_name)
             self._assert_dm_vmi(vmi_uuid,
                                 network['network']['id'],
@@ -314,13 +356,10 @@ class TestVPGsAndVMIs(IntegrationTestCase):
                'admin_state_up': True,
                'provider:network_type': 'vlan',
                'provider:physical_network': 'public',
-               'provider:segmentation_id': vlan_id}
+               'provider:segmentation_id': vlan_id,
+               'tenant_id': self.project.id}
         network = self.q_create_network(**net)
         return network, vlan_id
-
-    @staticmethod
-    def _make_vmi_name(vn_dict, host_id):
-        return "vmi_{}_{}".format(vn_dict['network']['name'], host_id)
 
     @classmethod
     def _make_fake_fabric(cls):

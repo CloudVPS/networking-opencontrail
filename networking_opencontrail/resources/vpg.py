@@ -21,11 +21,11 @@ from vnc_api import vnc_api
 LOG = logging.getLogger(__name__)
 
 
-def create(node, physical_interfaces, project):
+def create(node, physical_interfaces, fabric):
     name = make_name(node.name)
     id_perms = vnc_api.IdPermsType(enable=True)
     vpg = vnc_api.VirtualPortGroup(
-        name=name, parent_obj=project, id_perms=id_perms)
+        name=name, parent_obj=fabric, id_perms=id_perms)
 
     vpg_uuid = utils.make_uuid(vpg.name)
     vpg.set_uuid(vpg_uuid)
@@ -37,13 +37,4 @@ def create(node, physical_interfaces, project):
 
 
 def make_name(node_name):
-    return 'vpg_{}'.format(node_name)
-
-
-def make_fq_name(node, project):
-    vpg_name = make_name(node.name)
-
-    vpg_fq_name = project.fq_name[:]
-    vpg_fq_name.append(vpg_name)
-
-    return vpg_fq_name
+    return 'vpg#{}'.format(node_name)
