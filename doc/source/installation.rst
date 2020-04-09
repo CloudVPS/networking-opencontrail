@@ -49,13 +49,6 @@ Manual configuration
       :language: ini
       :lines: 1-3
 
-#. If you want to use integration with Device Manager, enable it in the same
-   file (see :doc:`device_manager` for details) like:
-
-   .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
-      :language: ini
-      :lines: 5-6
-
 #. Make sure you include all config files in the Neutron server parameters::
 
     /usr/local/bin/neutron-server --config-file /etc/neutron/neutron.conf \
@@ -96,13 +89,6 @@ Assume that the Kolla was deployed using this guide: `kolla_quickstart`_.
    .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
       :language: ini
       :lines: 1-3
-
-#. If you want to use an integration with Device Manager, enable it in the same
-   file (see :doc:`device_manager` for details) like:
-
-   .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
-      :language: ini
-      :lines: 5-6
 
 #. Edit ``/etc/kolla/neutron-server/config.json``:
 
