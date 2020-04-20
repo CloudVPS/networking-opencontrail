@@ -39,7 +39,8 @@ class TestNetworkSynchronization(IntegrationTestCase):
         net = {
             "name": "test_vlan_network",
             "provider:network_type": "vlan",
-            "provider:physical_network": "public",
+            'provider:segmentation_id': 20,
+            "provider:physical_network": self.provider,
             "admin_state_up": True,
         }
         q_net = self.q_create_network(**net)

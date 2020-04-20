@@ -38,22 +38,31 @@ class IntegrationTestCase(base.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(IntegrationTestCase, cls).setUpClass()
-        cls.controller_ip = os.getenv('CONTROLLER_IP', 'localhost')
-        cls.contrail_ip = os.getenv('CONTRAIL_IP', cls.controller_ip)
-
+        controller_ip = os.getenv('CONTROLLER_IP', 'localhost')
+        default_auth_url = 'http://{}/identity/v3'.format(controller_ip)
+        cls.auth_url = os.getenv('OS_AUTH_URL', default_auth_url)
+        cls.keystone_user = os.getenv('KEYSTONE_USER', 'admin')
+        cls.keystone_password = os.getenv('KEYSTONE_PASSWORD', 'admin')
+        cls.keystone_project = os.getenv('KEYSTONE_PROJECT', 'admin')
+        cls.keystone_project_domain_id = os.getenv(
+            'KEYSTONE_PROJECT_DOMAIN_ID', 'default')
+        cls.keystone_user_domain_id = os.getenv(
+            'KEYSTONE_USER_DOMAIN_ID', 'default')
+        cls.provider = os.getenv('PROVIDER', 'public')
+        cls.contrail_ip = os.getenv('CONTRAIL_IP', 'localhost')
         cls.contrail_api = vnc_api.VncApi(
             api_server_host=cls.contrail_ip, api_server_port=8082)
-
-        cls.auth_url = 'http://{}/identity/v3'.format(cls.controller_ip)
 
     def setUp(self):
         super(IntegrationTestCase, self).setUp()
 
-        auth = identity.V3Password(auth_url=self.auth_url,
-                                   username='admin', password='admin',
-                                   project_name='admin',
-                                   project_domain_id='default',
-                                   user_domain_id='default')
+        auth = identity.V3Password(
+            auth_url=self.auth_url,
+            username=self.keystone_user,
+            password=self.keystone_password,
+            project_name=self.keystone_project,
+            project_domain_id=self.keystone_project_domain_id,
+            user_domain_id=self.keystone_user_domain_id)
         sess = session.Session(auth=auth)
 
         self.neutron = neutron.Client(session=sess)

@@ -23,7 +23,8 @@ class TestManageNetwork(IntegrationTestCase):
         network_schema = {
             'name': 'test_vlan_network',
             'provider:network_type': 'vlan',
-            'provider:physical_network': 'public',
+            'provider:segmentation_id': 10,
+            'provider:physical_network': self.provider,
         }
         wrapped_q_network = self.q_create_network(**network_schema)
         q_network = wrapped_q_network['network']
@@ -37,7 +38,8 @@ class TestManageNetwork(IntegrationTestCase):
         network_schema = {
             'name': 'old_name',
             'provider:network_type': 'vlan',
-            'provider:physical_network': 'public',
+            'provider:segmentation_id': 10,
+            'provider:physical_network': self.provider,
 
         }
         wrapped_q_network = self.q_create_network(**network_schema)
@@ -55,7 +57,8 @@ class TestManageNetwork(IntegrationTestCase):
         network_schema = {
             'name': 'test_vlan_network',
             'provider:network_type': 'vlan',
-            'provider:physical_network': 'public',
+            'provider:segmentation_id': 10,
+            'provider:physical_network': self.provider,
         }
         wrapped_q_network = self.q_create_network(**network_schema)
         q_network = wrapped_q_network['network']
@@ -68,7 +71,8 @@ class TestManageNetwork(IntegrationTestCase):
         network_schema = {
             'name': 'test_vlan_network',
             'provider:network_type': 'vlan',
-            'provider:physical_network': 'public',
+            'provider:segmentation_id': 10,
+            'provider:physical_network': self.provider,
         }
         wrapped_q_network = self.q_create_network(**network_schema)
         q_network = wrapped_q_network['network']
@@ -81,7 +85,8 @@ class TestManageNetwork(IntegrationTestCase):
         network_schema = {
             'name': 'old_name',
             'provider:network_type': 'vlan',
-            'provider:physical_network': 'public',
+            'provider:segmentation_id': 10,
+            'provider:physical_network': self.provider,
 
         }
         wrapped_q_network = self.q_create_network(**network_schema)
