@@ -12,7 +12,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import unittest2 as unittest
 import uuid
 
 from networking_opencontrail.tests.base import IntegrationTestCase
@@ -36,12 +35,6 @@ class TestSubnets(IntegrationTestCase):
             'network_id': self.test_network['network']['id'],
             'gateway_ip': '10.10.11.1',
             'ip_version': 4,
-            'allocation_pools': [
-                {
-                    'start': '10.10.11.3',
-                    'end': '10.10.11.254'
-                }
-            ],
         }
         q_subnet = self.q_create_subnet(**subnet)
 
@@ -50,7 +43,6 @@ class TestSubnets(IntegrationTestCase):
             'network_id': q_subnet['subnet']['network_id'],
             'cidr': q_subnet['subnet']['cidr'],
             'gateway_ip': q_subnet['subnet']['gateway_ip'],
-            'allocation_pools': q_subnet['subnet']['allocation_pools'],
             'id': q_subnet['subnet']['id'],
         }
 
@@ -69,16 +61,73 @@ class TestSubnets(IntegrationTestCase):
             'cidr': '/'.join([sub_ip.get_ip_prefix() or '',
                               str(sub_ip.get_ip_prefix_len() or '')]),
             'gateway_ip': sub.get_default_gateway(),
-            'allocation_pools': [
-                {"start": pool.get_start(), "end": pool.get_end()}
-                for pool in sub.get_allocation_pools() or ()
-            ],
             'id': sub.get_subnet_uuid(),
         }
 
         self.assertDictEqual(expected, contrail_dict)
 
-    @unittest.skip("Subnet update does not work")
+    def test_add_second_subnet(self):
+        subnet_1 = {
+            'name': 'test_subnet_1',
+            'cidr': '10.10.11.0/24',
+            'network_id': self.test_network['network']['id'],
+            'gateway_ip': '10.10.11.1',
+            'ip_version': 4,
+        }
+        q_subnet_1 = self.q_create_subnet(**subnet_1)
+
+        subnet_2 = {
+            'name': 'test_subnet_1',
+            'cidr': '20.20.22.0/24',
+            'network_id': self.test_network['network']['id'],
+            'gateway_ip': '20.20.22.1',
+            'ip_version': 4,
+        }
+        q_subnet_2 = self.q_create_subnet(**subnet_2)
+
+        expected_1 = {
+            'name': q_subnet_1['subnet']['name'],
+            'network_id': q_subnet_1['subnet']['network_id'],
+            'cidr': q_subnet_1['subnet']['cidr'],
+            'gateway_ip': q_subnet_1['subnet']['gateway_ip'],
+            'id': q_subnet_1['subnet']['id'],
+        }
+        expected_2 = {
+            'name': q_subnet_2['subnet']['name'],
+            'network_id': q_subnet_2['subnet']['network_id'],
+            'cidr': q_subnet_2['subnet']['cidr'],
+            'gateway_ip': q_subnet_2['subnet']['gateway_ip'],
+            'id': q_subnet_2['subnet']['id'],
+        }
+        sub_1 = self._get_subnet_from_network(
+            q_subnet_1['subnet']['id'],
+            self.test_network['network']['id']
+        )
+
+        sub_2 = self._get_subnet_from_network(
+            q_subnet_2['subnet']['id'],
+            self.test_network['network']['id']
+        )
+
+        tf_network = self.tf_get('virtual-network',
+                                 self.test_network['network']['id'])
+
+        self.assertIsNotNone(sub_1)
+        self.assertIsNotNone(sub_2)
+
+        for sub, expected in zip((sub_1, sub_2), (expected_1, expected_2)):
+            sub_ip = sub.get_subnet()
+            contrail_dict = {
+                'name': sub.get_subnet_name(),
+                'network_id': tf_network.get_uuid(),
+                'cidr': '/'.join([sub_ip.get_ip_prefix() or '',
+                                  str(sub_ip.get_ip_prefix_len() or '')]),
+                'gateway_ip': sub.get_default_gateway(),
+                'id': sub.get_subnet_uuid(),
+            }
+
+            self.assertDictEqual(expected, contrail_dict)
+
     def test_update_subnet(self):
         """Update subnet properties.
 
@@ -110,15 +159,15 @@ class TestSubnets(IntegrationTestCase):
 
         changed_fields = {
             'name': 'new_subnet_name',
+            'gateway_ip': '10.10.11.2',
         }
         q_subnet = self.q_update_subnet(q_subnet, **changed_fields)
 
         expected = {
             'name': q_subnet['subnet']['name'],
             'network_id': q_subnet['subnet']['network_id'],
-            'cdir': q_subnet['subnet']['cidr'],
+            'cidr': q_subnet['subnet']['cidr'],
             'gateway_ip': q_subnet['subnet']['gateway_ip'],
-            'allocation_pools': q_subnet['subnet']['allocation_pools'],
             'id': q_subnet['subnet']['id'],
         }
 
@@ -135,10 +184,6 @@ class TestSubnets(IntegrationTestCase):
             'cidr': '/'.join([sub_ip.get_ip_prefix() or '',
                               str(sub_ip.get_ip_prefix_len() or '')]),
             'gateway_ip': sub.get_default_gateway(),
-            'allocation_pools': [
-                {"start": pool.get_start(), "end": pool.get_end()}
-                for pool in sub.get_allocation_pools() or ()
-            ],
             'id': sub.get_subnet_uuid(),
         }
 
@@ -150,13 +195,7 @@ class TestSubnets(IntegrationTestCase):
             'cidr': '10.10.11.0/24',
             'network_id': self.test_network['network']['id'],
             'gateway_ip': '10.10.11.1',
-            'ip_version': 4,
-            'allocation_pools': [
-                {
-                    'start': '10.10.11.2',
-                    'end': '10.10.11.254'
-                }
-            ],
+            'ip_version': 4
         }
 
         q_subnet = self.q_create_subnet(**subnet)

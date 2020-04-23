@@ -15,7 +15,6 @@
 
 
 import mock
-import uuid
 
 from neutron.tests.unit import testlib_api
 
@@ -36,88 +35,12 @@ class OpenContrailTestCases(testlib_api.SqlTestCase):
 
         # Base class validates configs, mock it after calling
         with mock.patch("oslo_config.cfg.CONF"):
-            mech_driver.subnet_dns_integrator = mock.MagicMock()
             mech_driver.drv = mock.MagicMock()
             self.drv = mech_driver.OpenContrailMechDriver()
             self.drv.initialize()
 
     def tearDown(self):
         super(OpenContrailTestCases, self).tearDown()
-
-    def test_create_subnet(self):
-        network_id = 'test_net1'
-        tenant_id = 'ten-1'
-        subnet_id = 'sub-1'
-
-        subnet_context, subnet = self.get_subnet_context(tenant_id, network_id,
-                                                         subnet_id)
-        self.mock_drv_opencontrail_method('create_subnet', subnet['subnet'])
-
-        self.drv.create_subnet_postcommit(subnet_context)
-
-        expected_drv_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().create_subnet(
-                subnet_context._plugin_context, subnet)
-        ]
-        mech_driver.drv.assert_has_calls(expected_drv_calls)
-
-        expected_dns_integrator_calls = [
-            mock.call.SubnetDNSCompatibilityIntegrator(
-                mech_driver.drv.OpenContrailDrivers()),
-            mock.call.SubnetDNSCompatibilityIntegrator(
-                ).add_dns_port_for_subnet(
-                subnet_context._plugin_context, subnet['subnet'])
-        ]
-        mech_driver.subnet_dns_integrator.assert_has_calls(
-            expected_dns_integrator_calls)
-
-    def test_delete_subnet(self):
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        subnet_id = 'sub-1'
-
-        subnet_context, subnet = self.get_subnet_context(tenant_id, network_id,
-                                                         subnet_id)
-        self.drv.delete_subnet_postcommit(subnet_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().delete_subnet(
-                subnet_context._plugin_context, subnet_id)
-        ]
-
-        mech_driver.drv.assert_has_calls(expected_calls)
-
-    def test_update_subnet(self):
-        network_id = 'test_net1'
-        tenant_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, 'ten-1'))
-        subnet_id = 'sub-1'
-        subnet_name = 'test-sub-1'
-
-        subnet_context, subnet = self.get_subnet_context(tenant_id, network_id,
-                                                         subnet_id,
-                                                         subnet_name)
-        self.drv.create_subnet_postcommit(subnet_context)
-
-        expected_calls = [
-            mock.call.OpenContrailDrivers(),
-            mock.call.OpenContrailDrivers().create_subnet(
-                subnet_context._plugin_context, subnet)
-        ]
-
-        # Change the subnet information
-        subnet_name = 'test-sub-2'
-        subnet_context, subnet = self.get_subnet_context(tenant_id, network_id,
-                                                         subnet_id,
-                                                         subnet_name)
-        self.drv.update_subnet_postcommit(subnet_context)
-
-        expected_calls.append(
-            mock.call.OpenContrailDrivers().update_subnet(
-                subnet_context._plugin_context, subnet_id, subnet))
-
-        mech_driver.drv.assert_has_calls(expected_calls)
 
     def test_create_security_group(self):
         ctx = fake_plugin_context('ten-1')

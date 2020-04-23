@@ -23,6 +23,7 @@ LOG = logging.getLogger(__name__)
 
 class TFClient(object):
     DEFAULT_GLOBAL_CONF = "default-global-system-config"
+    DEFAULT_IPAM_NAME = "default-network-ipam"
     ID_PERMS = vnc_api.IdPermsType(
         creator="networking-opencontrail", enable=True)
 
@@ -162,6 +163,23 @@ class TFClient(object):
             return self.session.fabric_read(id=uuid, fq_name=fq_name)
         except vnc_api.NoIdError:
             return None
+
+    def read_default_ipam(self, project):
+        ipam_fq_name = project.fq_name + [self.DEFAULT_IPAM_NAME]
+
+        try:
+            return self.session.network_ipam_read(ipam_fq_name)
+        except vnc_api.NoIdError:
+            ipam = vnc_api.NetworkIpam(self.DEFAULT_IPAM_NAME,
+                                       parent_obj=project)
+            self.session.network_ipam_create(ipam)
+            return self.session.network_ipam_read(ipam_fq_name)
+
+    def update_ipam(self, ipam):
+        self.session.network_ipam_create(ipam)
+
+    def delete_subnet(self, uuid=None, fq_name=None):
+        self.session.subnet_delete(id=uuid, fq_name=fq_name)
 
     @property
     def connected(self):

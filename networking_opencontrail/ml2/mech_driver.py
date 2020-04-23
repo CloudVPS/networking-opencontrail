@@ -20,7 +20,6 @@ from neutron_lib.plugins.ml2 import api
 from networking_opencontrail.common import utils
 from networking_opencontrail.l3 import snat_synchronizer
 from networking_opencontrail.ml2 import opencontrail_sg_callback
-from networking_opencontrail.ml2 import subnet_dns_integrator
 from networking_opencontrail import repository
 from networking_opencontrail.sync import worker
 
@@ -29,7 +28,6 @@ LOG = logging.getLogger(__name__)
 OMIT_DEVICES_TYPES = [
     "network:floatingip",
     snat_synchronizer.TF_SNAT_DEVICE_OWNER,
-    subnet_dns_integrator.TF_DNS_DEVICE_OWNER,
 ]
 
 
@@ -59,8 +57,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
         self.drv = tf_driver
         self.sg_handler = (
             opencontrail_sg_callback.OpenContrailSecurityGroupHandler(self))
-        self.subnet_handler = (
-            subnet_dns_integrator.SubnetDNSCompatibilityIntegrator(tf_driver))
 
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
@@ -83,31 +79,18 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
     def create_subnet_postcommit(self, context):
         """Create a subnet in OpenContrail."""
-        subnet = {'subnet': context.current}
-        try:
-            ret_subnet = self.drv.create_subnet(context._plugin_context,
-                                                subnet)
-            self.subnet_handler.add_dns_port_for_subnet(
-                context._plugin_context, ret_subnet)
-        except Exception:
-            LOG.exception("Create Subnet Failed")
+        subnet = context.current
+        repository.subnet.create(subnet)
 
     def delete_subnet_postcommit(self, context):
         """Delete a subnet from OpenContrail."""
         subnet = context.current
-        try:
-            self.drv.delete_subnet(context._plugin_context, subnet['id'])
-        except Exception:
-            LOG.exception("Delete Subnet Failed")
+        repository.subnet.delete(subnet)
 
     def update_subnet_postcommit(self, context):
         """Update a subnet in OpenContrail."""
-        subnet = {'subnet': context.current}
-        try:
-            self.drv.update_subnet(context._plugin_context,
-                                   subnet['subnet']['id'], subnet)
-        except Exception:
-            LOG.exception("Update Subnet Failed")
+        subnet = context.current
+        repository.subnet.update(subnet)
 
     def create_port_postcommit(self, context):
         """Create a port in OpenContrail."""
