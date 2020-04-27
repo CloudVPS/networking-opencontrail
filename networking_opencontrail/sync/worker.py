@@ -36,6 +36,7 @@ class TFSyncWorker(worker.BaseWorker):
         self.synchronizers = [
             synchronizers.NetworkSynchronizer(),
             synchronizers.VPGAndVMISynchronizer(),
+            synchronizers.SubnetSynchronizer(),
         ]
         self._thread = None
         self._running = False

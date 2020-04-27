@@ -11,7 +11,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
 from retrying import retry
 
 from networking_opencontrail.common import utils
@@ -317,3 +316,96 @@ class TestVPGAndVMISynchronization(SynchronizationTestCase):
                 "virtual-machine-interface", vmi.uuid))
         self.assertIsNone(
             self._get_redeleted_resource("virtual-port-group", vpg.uuid))
+
+
+class TestSubnetSynchronization(SynchronizationTestCase):
+    """Following scenarios are tested:
+
+    1. Test if subnet is recreated properly:
+        - Create a test subnet in Neutron.
+        - Corresponding subnet should be created in TF.
+        - Delete the subnet from TF manually.
+        - Check if the subnet was recreated in TF.
+
+    2. Test if stale subnet is deleted properly:
+        - Create a test subnet in TF.
+        - Since it doesn't correspond to any subnet in Neutron, it will be
+            considered 'stale' by the Synchronizer.
+        - Check if the subnet was deleted in TF.
+    """
+    def test_recreate(self):
+        subnet = {
+            'name': 'test_subnet',
+            'cidr': '10.10.11.0/24',
+            'network_id': self.test_network['network']['id'],
+            'gateway_ip': '10.10.11.1',
+            'ip_version': 4,
+        }
+        q_subnet = self.q_create_subnet(**subnet)["subnet"]
+
+        self.tf_delete_subnet(q_subnet)
+
+        self.assertIsNotNone(
+            self._get_recreated_resource(
+                q_subnet["id"], q_subnet["network_id"]
+            )
+        )
+
+    def test_redelete(self):
+        subnet_dict = {
+            'name': 'test_subnet',
+            'id': '8bf2f40d-9b2c-473d-a980-1356bf1a6a69',
+            'cidr': '10.10.11.0/24',
+            'network_id': self.test_network['network']['id'],
+            'gateway_ip': '10.10.11.1',
+            'ip_version': 4,
+        }
+
+        network = self.tf_get("virtual-network",
+                              self.test_network["network"]["id"])
+        subnet = resources.subnet.create(subnet_dict)
+
+        self._create_tf_subnet(network, subnet)
+
+        self.assertIsNone(
+            self._get_redeleted_resource(
+                subnet_dict["id"], subnet_dict["network_id"]
+            )
+        )
+
+    def _create_tf_subnet(self, network, subnet):
+        ipam = vnc_api.NetworkIpam(parent_obj=self.tf_project)
+        self.contrail_api.network_ipam_create(ipam)
+        ipam = self.contrail_api.network_ipam_read(
+            self.tf_project.fq_name + ["default-network-ipam"])
+        vn_subnets = vnc_api.VnSubnetsType([subnet])
+        network.add_network_ipam(ipam, vn_subnets)
+        self.contrail_api.virtual_network_update(network)
+
+    @retry(
+        retry_on_result=retry_if_none,
+        wait_fixed=1000,
+        stop_max_delay=10000
+    )
+    def _get_recreated_resource(self, subnet_id, network_id):
+        network = self.tf_get("virtual-network", network_id)
+        ipam_refs = network.get_network_ipam_refs()
+        vn_subnets = ipam_refs[0]['attr']
+        for subnet in list(vn_subnets.ipam_subnets):
+            if subnet.subnet_uuid == subnet_id:
+                return subnet
+        return None
+
+    @retry(
+        retry_on_result=retry_if_not_none,
+        wait_fixed=1000,
+        stop_max_delay=10000,
+    )
+    def _get_redeleted_resource(self, subnet_id, network_id):
+        network = self.tf_get("virtual-network", network_id)
+        ipam_refs = network.get_network_ipam_refs()
+        vn_subnets = ipam_refs[0]['attr']
+        for subnet in list(vn_subnets.ipam_subnets):
+            if subnet.subnet_uuid == subnet_id:
+                return subnet
+        return None

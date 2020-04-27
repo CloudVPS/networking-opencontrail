@@ -175,12 +175,6 @@ class TFClient(object):
             self.session.network_ipam_create(ipam)
             return self.session.network_ipam_read(ipam_fq_name)
 
-    def update_ipam(self, ipam):
-        self.session.network_ipam_create(ipam)
-
-    def delete_subnet(self, uuid=None, fq_name=None):
-        self.session.subnet_delete(id=uuid, fq_name=fq_name)
-
     @property
     def connected(self):
         return self.session is not None

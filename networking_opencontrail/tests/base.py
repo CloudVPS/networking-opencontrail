@@ -153,6 +153,18 @@ class IntegrationTestCase(base.BaseTestCase):
 
                 self.tf_delete(resource_type, resource_id)
 
+    def tf_delete_subnet(self, q_subnet):
+        network = self.tf_get("virtual-network", q_subnet["network_id"])
+
+        ipam_refs = network.get_network_ipam_refs()
+        vn_subnets = ipam_refs[0]['attr']
+        for subnet in list(vn_subnets.ipam_subnets):
+            if subnet.subnet_uuid == q_subnet["id"]:
+                vn_subnets.ipam_subnets.remove(subnet)
+
+        network._pending_field_updates.add('network_ipam_refs')
+        self.contrail_api.virtual_network_update(network)
+
     def _create_keystone_project_for_test(self):
         proj_name = self.__class__.__name__ + '-' + \
             str(int(now())) + '-' + \

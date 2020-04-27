@@ -30,19 +30,17 @@ def create(q_subnet):
     project = request_project(q_subnet)
     network = tf_client.read_network(q_subnet["network_id"])
 
-    ipam = tf_client.read_default_ipam(project)
-
     subnet = resources.subnet.create(q_subnet=q_subnet)
 
     ipam_refs = network.get_network_ipam_refs()
     if not ipam_refs:
+        ipam = tf_client.read_default_ipam(project)
         vn_subnets = vnc_api.VnSubnetsType([subnet])
         network.add_network_ipam(ipam, vn_subnets)
     else:
         vn_subnets = ipam_refs[0]['attr']
         vn_subnets.ipam_subnets.append(subnet)
         network._pending_field_updates.add('network_ipam_refs')
-        tf_client.update_network(network)
 
     tf_client.update_network(network)
 
@@ -55,9 +53,19 @@ def update(q_subnet):
 
 @reconnect
 def delete(q_subnet):
-    network = tf_client.read_network(q_subnet["network_id"])
+    try:
+        network = tf_client.read_network(q_subnet["network_id"])
+        _delete_from_network(network, q_subnet)
+    except KeyError:
+        networks = tf_client.list_networks()
+        for network in networks:
+            _delete_from_network(network, q_subnet)
 
+
+def _delete_from_network(network, q_subnet):
     ipam_refs = network.get_network_ipam_refs()
+    if not ipam_refs:
+        return
     vn_subnets = ipam_refs[0]['attr']
     for subnet in list(vn_subnets.ipam_subnets):
         if subnet.subnet_uuid == q_subnet["id"]:

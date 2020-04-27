@@ -243,3 +243,42 @@ class VPGAndVMISynchronizer(ResourceSynchronizer):
 
         self.vmi_synchronizer.delete_vmis_from_tf(vmi_names_to_delete)
         self.vpg_synchronizer.delete_vpgs_from_tf(vpg_names_to_delete)
+
+
+class SubnetSynchronizer(OneToOneResourceSynchronizer):
+    """A Subnet Synchronizer class.
+
+    Provides methods used to synchronize subnets.
+    """
+    LOG_RES_NAME = "Subnet"
+
+    def _get_tf_resources(self):
+        """Get a list of subnets used by TF.
+
+        Since there's no way of getting TF subnets directly, this method
+        iterates over all virtual networks to create a list of subnets that are
+        being used by them.
+
+        :return: list of TF subnets
+        :rtype: list
+        """
+        networks = repository.network.list_all()
+        subnets = set()
+        for network in networks:
+            ipam_refs = network.get_network_ipam_refs()
+            if not ipam_refs:
+                continue
+            vn_subnets = ipam_refs[0]['attr']
+            for subnet in vn_subnets.ipam_subnets:
+                subnet.get_uuid = subnet.get_subnet_uuid
+                subnets.add(subnet)
+        return subnets
+
+    def _get_neutron_resources(self):
+        return self._core_plugin.get_subnets(self._context)
+
+    def _create_resource(self, resource):
+        repository.subnet.create(resource)
+
+    def _delete_resource(self, resource_id):
+        repository.subnet.delete({"id": resource_id})
