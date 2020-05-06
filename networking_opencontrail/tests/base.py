@@ -27,6 +27,8 @@ from neutronclient.v2_0 import client as neutron
 from oslotest import base
 from vnc_api import vnc_api
 
+DEFAULT_GLOBAL_SYSTEM_CONFIG = "default-global-system-config"
+
 
 class TestCase(base.BaseTestCase):
     """Test case base class for all unit tests."""
@@ -308,15 +310,29 @@ class FabricTestCase(IntegrationTestCase):
     Provides helper methods for testing Fabric management functionality.
     """
     LAST_VLAN_ID = 100
-    FABRIC = {'qfx-test-1': ['xe-0/0/0'],
-              'qfx-test-2': ['xe-0/0/0',
-                             'xe-1/1/1']}
-    TOPOLOGY = {'compute-node': {'port-1':
-                                 ('qfx-test-1', 'xe-0/0/0')},
-                'compute-2': {'port-1':
-                              ('qfx-test-2', 'xe-0/0/0'),
-                              'port-2':
-                              ('qfx-test-2', 'xe-1/1/1')}}
+    FABRIC = {
+        'qfx-test-1': ['xe-0/0/0'],
+        'qfx-test-2': ['xe-0/0/0', 'xe-1/1/1']
+    }
+    PR_ROLES = {
+        'qfx-test-1': {
+            'physical-role': 'leaf',
+            'overlay-role': 'crb-access'
+        },
+        'qfx-test-2': {
+            'physical-role': 'leaf',
+            'overlay-role': 'crb-access'
+        }
+    }
+    TOPOLOGY = {
+        'compute-node': {
+            'port-1': ('qfx-test-1', 'xe-0/0/0')
+        },
+        'compute-2': {
+            'port-1': ('qfx-test-2', 'xe-0/0/0'),
+            'port-2': ('qfx-test-2', 'xe-1/1/1')
+        }
+    }
 
     @classmethod
     def setUpClass(cls):
@@ -408,7 +424,7 @@ class FabricTestCase(IntegrationTestCase):
     def _make_fake_fabric(cls):
         try:
             fabric = cls._vnc_api.fabric_read(
-                ["default-global-system-config", "fabric01"]
+                [DEFAULT_GLOBAL_SYSTEM_CONFIG, "fabric01"]
             )
             cls._fabric_uuid = fabric.get_uuid()
         except vnc_api.NoIdError:
@@ -417,23 +433,12 @@ class FabricTestCase(IntegrationTestCase):
         cls._cleanup_fabric_queue.append(('fabric', cls._fabric_uuid))
 
         for pr_name in cls.FABRIC:
-            try:
-                pr = cls._vnc_api.physical_router_read(
-                    ["default-global-system-config", pr_name]
-                )
-                pr.set_fabric(fabric)
-                pr_uuid = pr.get_uuid()
-                cls._vnc_api.physical_router_update(pr)
-            except vnc_api.NoIdError:
-                pr = vnc_api.PhysicalRouter(pr_name)
-                pr.set_fabric(fabric)
-                pr_uuid = cls._vnc_api.physical_router_create(pr)
-            cls._cleanup_fabric_queue.append(('physical_router', pr_uuid))
+            pr = cls._make_fake_physical_router(fabric, pr_name)
 
             for pi_name in cls.FABRIC[pr_name]:
                 try:
                     pi = cls._vnc_api.physical_interface_read([
-                        "default-global-system-config", pr_name, pi_name])
+                        DEFAULT_GLOBAL_SYSTEM_CONFIG, pr_name, pi_name])
                     pi_uuid = pi.get_uuid()
                 except vnc_api.NoIdError:
                     pi = vnc_api.PhysicalInterface(name=pi_name, parent_obj=pr)
@@ -442,11 +447,44 @@ class FabricTestCase(IntegrationTestCase):
                     ('physical_interface', pi_uuid))
 
     @classmethod
+    def _make_fake_physical_router(cls, fabric, pr_name):
+        try:
+            pr = cls._vnc_api.physical_router_read(
+                [DEFAULT_GLOBAL_SYSTEM_CONFIG, pr_name]
+            )
+            pr.set_fabric(fabric)
+            pr_uuid = pr.get_uuid()
+            cls._assign_roles_to_pr(pr)
+            cls._vnc_api.physical_router_update(pr)
+        except vnc_api.NoIdError:
+            pr = vnc_api.PhysicalRouter(pr_name)
+            pr.set_fabric(fabric)
+            cls._assign_roles_to_pr(pr)
+            pr_uuid = cls._vnc_api.physical_router_create(pr)
+        cls._cleanup_fabric_queue.append(('physical_router', pr_uuid))
+        return pr
+
+    @classmethod
+    def _assign_roles_to_pr(cls, pr):
+        if pr.name not in cls.PR_ROLES:
+            return
+        physical_role_name = cls.PR_ROLES[pr.name]['physical-role']
+        overlay_role_name = cls.PR_ROLES[pr.name]['overlay-role']
+        physical_role = cls._vnc_api.physical_role_read(
+            [DEFAULT_GLOBAL_SYSTEM_CONFIG, physical_role_name]
+        )
+        overlay_role = cls._vnc_api.overlay_role_read(
+            [DEFAULT_GLOBAL_SYSTEM_CONFIG, overlay_role_name]
+        )
+        pr.add_physical_role(physical_role)
+        pr.add_overlay_role(overlay_role)
+
+    @classmethod
     def _make_fake_topology(cls):
         for node_name in cls.TOPOLOGY:
             try:
                 node = cls._vnc_api.node_read(
-                    ["default-global-system-config", node_name]
+                    [DEFAULT_GLOBAL_SYSTEM_CONFIG, node_name]
                 )
                 node_uuid = node.get_uuid()
             except vnc_api.NoIdError:
@@ -457,7 +495,7 @@ class FabricTestCase(IntegrationTestCase):
             for port_name, port_pi in cls.TOPOLOGY[node_name].items():
                 try:
                     node_port = cls._vnc_api.port_read(
-                        ["default-global-system-config", node_name, port_name]
+                        [DEFAULT_GLOBAL_SYSTEM_CONFIG, node_name, port_name]
                     )
                     port_uuid = node_port.get_uuid()
                 except vnc_api.NoIdError:

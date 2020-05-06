@@ -17,6 +17,8 @@ from oslo_log import log as logging
 
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
+from networking_opencontrail.repository.utils.irb import \
+    select_physical_routers_for_irb
 from networking_opencontrail.repository.utils.tag import ml2_tag_manager
 from networking_opencontrail.repository.utils.utils import request_project
 
@@ -30,6 +32,8 @@ LOG = logging.getLogger(__name__)
 def create(q_router):
     project = request_project(q_router)
     router = resources.router.create(q_router, project)
+
+    attach_physical_routers(router)
 
     ml2_tag_manager.tag(router)
 
@@ -50,3 +54,10 @@ def delete(router_id):
 
     tf_client.delete_logical_router(uuid=router_id)
     LOG.info('Logical Router %s deleted from TF.', router_id)
+
+
+def attach_physical_routers(router):
+    all_physical_routers = tf_client.list_physical_routers()
+    physical_routers = select_physical_routers_for_irb(all_physical_routers)
+    for physical_router in physical_routers:
+        router.add_physical_router(physical_router)
