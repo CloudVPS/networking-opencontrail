@@ -296,6 +296,11 @@ class IntegrationTestCase(base.BaseTestCase):
     def q_delete_security_group_rule(self, rule):
         self.q_delete_resource(rule['security_group_rule'])
 
+    def q_create_logical_router(self, router):
+        router['project_id'] = self.project.id
+        router_body = {'router': router}
+        return self.q_create_resource(router_body)
+
 
 class FabricTestCase(IntegrationTestCase):
     """Base class for all Fabric related test cases.
