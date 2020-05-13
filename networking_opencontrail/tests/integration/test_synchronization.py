@@ -14,6 +14,7 @@
 from retrying import retry
 
 from networking_opencontrail.common import utils
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail import resources
 from networking_opencontrail.tests.base import FabricTestCase
 
@@ -31,9 +32,6 @@ def retry_if_not_none(result):
 class SynchronizationTestCase(FabricTestCase):
     def setUp(self):
         super(SynchronizationTestCase, self).setUp()
-        self.ml2_tag = self.tf_list(
-            'tag', detail=True, fq_names=[["label=__ML2__"]]
-        )[0]
 
     @retry(
         retry_on_result=retry_if_none,
@@ -86,7 +84,7 @@ class TestNetworkSynchronization(SynchronizationTestCase):
     def test_redelete(self):
         tagged_network = vnc_api.VirtualNetwork(
             name="test_network_1", parent_obj=self.tf_project)
-        tagged_network.add_tag(self.ml2_tag)
+        tagger.assign_to_ntf(tagged_network)
         tagged_network_uuid = self.tf_create(tagged_network)
 
         untagged_network = vnc_api.VirtualNetwork(
@@ -150,7 +148,7 @@ class TestVPGSynchronization(SynchronizationTestCase):
         tagged_vpg_name = resources.vpg.make_name('compute-node')
         tagged_vpg = vnc_api.VirtualPortGroup(
             name=tagged_vpg_name, parent_obj=self.tf_project)
-        tagged_vpg.add_tag(self.ml2_tag)
+        tagger.assign_to_ntf(tagged_vpg)
         tagged_vpg.set_uuid(utils.make_uuid(tagged_vpg_name))
         self.tf_create(tagged_vpg)
 
@@ -219,7 +217,7 @@ class TestVMISynchronization(SynchronizationTestCase):
         tagged_vmi_name = resources.vmi.make_name(network.uuid, 'compute-node')
         tagged_vmi = vnc_api.VirtualMachineInterface(
             name=tagged_vmi_name, parent_obj=self.tf_project)
-        tagged_vmi.add_tag(self.ml2_tag)
+        tagger.assign_to_ntf(tagged_vmi)
         tagged_vmi.set_uuid(utils.make_uuid(tagged_vmi_name))
         tagged_vmi.add_virtual_network(network)
         self.tf_create(tagged_vmi)
@@ -298,7 +296,7 @@ class TestVPGAndVMISynchronization(SynchronizationTestCase):
         vmi_name = resources.vmi.make_name(network.uuid, 'compute-node')
         vmi = vnc_api.VirtualMachineInterface(
             name=vmi_name, parent_obj=self.tf_project)
-        vmi.add_tag(self.ml2_tag)
+        tagger.assign_to_ntf(vmi)
         vmi.set_uuid(utils.make_uuid(vmi_name))
         vmi.add_virtual_network(network)
         self.tf_create(vmi)
@@ -306,7 +304,7 @@ class TestVPGAndVMISynchronization(SynchronizationTestCase):
         vpg_name = resources.vpg.make_name('compute-node')
         vpg = vnc_api.VirtualPortGroup(
             name=vpg_name, parent_obj=self.tf_project)
-        vpg.add_tag(self.ml2_tag)
+        tagger.assign_to_ntf(vpg)
         vpg.add_virtual_machine_interface(vmi)
         vpg.set_uuid(utils.make_uuid(vpg_name))
         self.tf_create(vpg)

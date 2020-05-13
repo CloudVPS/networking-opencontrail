@@ -13,19 +13,30 @@
 #    under the License.
 #
 
-from oslo_log import log as logging
 from vnc_api import vnc_api
 
+VALUE = '__ML2__'
+TYPE = 'label'
+NAME = '{}={}'.format(TYPE, VALUE)
+FQ_NAME = [NAME]
 
-LOG = logging.getLogger(__name__)
+
+def assign_to_ntf(obj):
+    """Adds a special NTF tag to Tungsten Fabric object"""
+    obj.add_tag(identifier_tag())
 
 
-def create(q_network, project):
-    network_name = q_network['name']
-    id_perms = vnc_api.IdPermsType(enable=True)
-    network = vnc_api.VirtualNetwork(
-        name=network_name, parent_obj=project, id_perms=id_perms)
+def belongs_to_ntf(obj):
+    """Returns true if the object was created by the NTF"""
+    tag_refs = obj.get_tag_refs() or ()
+    return FQ_NAME in [ref['to'] for ref in tag_refs]
 
-    network.uuid = q_network['id']
 
-    return network
+def identifier_tag():
+    """Returns tag object used to assign object to NTF"""
+    return vnc_api.Tag(
+        tag_value=VALUE,
+        tag_type_name=TYPE,
+        name=NAME,
+        fq_name=FQ_NAME,
+    )

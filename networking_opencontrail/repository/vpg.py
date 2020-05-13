@@ -17,7 +17,8 @@ from oslo_log import log as logging
 
 from networking_opencontrail.common.utils import make_uuid
 from networking_opencontrail.repository.utils.client import tf_client
-from networking_opencontrail.repository.utils.tag import ml2_tag_manager
+from networking_opencontrail.repository.utils.initialize import reconnect
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils import utils
 from networking_opencontrail import resources
 
@@ -25,6 +26,7 @@ from networking_opencontrail import resources
 LOG = logging.getLogger(__name__)
 
 
+@reconnect
 def create(q_port, q_network):
     try:
         resources.vmi.validate(q_port, q_network)
@@ -43,6 +45,7 @@ def create(q_port, q_network):
     return vpg
 
 
+@reconnect
 def delete(q_port, q_network):
     try:
         resources.vmi.validate(q_port, q_network)
@@ -62,9 +65,8 @@ def delete(q_port, q_network):
         LOG.info("%s should exists - skipping", vpg.name)
         return
 
-    if not ml2_tag_manager.check(vpg):
-        LOG.info(
-            "%s is not tagged with label=__ML2__ tag - skipping", vpg.name)
+    if not tagger.belongs_to_ntf(vpg):
+        LOG.info("%s was not created by NTF - skipping", vpg.name)
         return
 
     tf_client.delete_vpg(uuid=vpg.uuid)
@@ -78,6 +80,7 @@ def _read_from_node(node):
     return vpg
 
 
+@reconnect
 def create_from_node(node):
     physical_interfaces = utils.request_physical_interfaces_from_node(node)
     fabric = utils.request_fabric_from_node(node)
@@ -86,7 +89,6 @@ def create_from_node(node):
         return
 
     vpg = resources.vpg.create(node, physical_interfaces, fabric)
-    ml2_tag_manager.tag(vpg)
 
     tf_client.create_vpg(vpg)
     return vpg

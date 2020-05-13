@@ -19,7 +19,7 @@ from oslo_log import log as logging
 
 from networking_opencontrail.common import utils
 from networking_opencontrail import repository
-from networking_opencontrail.repository import ml2_tag_manager
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import (
     request_node_from_host)
 from networking_opencontrail import resources
@@ -64,9 +64,8 @@ class NetworkSynchronizer(OneToOneResourceSynchronizer):
     def _delete_resource(self, resource_id):
         repository.network.delete({"id": resource_id})
 
-    def _ignore_tf_resource(self, resource):
-        return (resource.get_fq_name()[1] == "default-project"
-                or self._no_ml2_tag(resource))
+    def _ignore_non_ntf_resource(self, resource):
+        return (resource.get_fq_name()[1] == "default-project")
 
     def _ignore_neutron_resource(self, resource):
         return "_snat_" in resource["name"]
@@ -99,8 +98,7 @@ class VPGSynchronizer(ResourceSynchronizer):
 
     @staticmethod
     def _make_vpg_names_from_tf_data(vpgs):
-        return set(vpg.name for vpg in vpgs
-                   if ml2_tag_manager.check(vpg))
+        return set(vpg.name for vpg in vpgs if tagger.belongs_to_ntf(vpg))
 
     def create_vpgs_in_tf(self, vpg_names):
         for vpg_name in vpg_names:
@@ -166,8 +164,7 @@ class VMISynchronizer(ResourceSynchronizer):
 
     @staticmethod
     def _make_vmi_names_from_tf_data(vmis):
-        return set(vmi.name for vmi in vmis
-                   if ml2_tag_manager.check(vmi))
+        return set(vmi.name for vmi in vmis if tagger.belongs_to_ntf(vmi))
 
     def create_vmis_in_tf(self, vmi_names):
         for vmi_name in vmi_names:

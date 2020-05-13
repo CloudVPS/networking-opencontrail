@@ -20,7 +20,6 @@ from networking_opencontrail.repository import subnet
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import connect
 from networking_opencontrail.repository.utils.initialize import initialize
-from networking_opencontrail.repository.utils.tag import ml2_tag_manager
 from networking_opencontrail.repository import vmi
 from networking_opencontrail.repository import vpg
 
@@ -34,6 +33,5 @@ __all__ = [
     'subnet',
     'router',
     'tf_client',
-    'ml2_tag_manager',
     'ConnectionError',
 ]

@@ -15,14 +15,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import os
-import uuid
-
 from random import randint
 from time import time as now
+import uuid
 
 from keystoneauth1 import identity
 from keystoneauth1 import session
 from keystoneclient.v3 import client as keystone
+from networking_opencontrail.repository.utils import tagger
 from neutronclient.v2_0 import client as neutron
 from oslotest import base
 from vnc_api import vnc_api
@@ -382,7 +382,7 @@ class FabricTestCase(IntegrationTestCase):
             2. VMI is connected only to given network
             3. VMI has right VLAN tag
             4. VMI has reference to one VPG and this VPG has reference to it
-            5. VMI is tagged with label=__ML2__ tag
+            5. VMI is signed by NTF.
         """
 
         self.assertIsNotNone(vmi_uuid)
@@ -399,9 +399,7 @@ class FabricTestCase(IntegrationTestCase):
         vpg_uuid = vmi.get_virtual_port_group_back_refs()[0]['uuid']
         vpg = self.tf_get('virtual-port-group', vpg_uuid)
         self.assertTrue(self._check_vpg_contains_vmi_ref(vpg, vmi_uuid))
-
-        tag_names = [tag_ref["to"][-1] for tag_ref in vmi.get_tag_refs() or ()]
-        self.assertIn("label=__ML2__", tag_names)
+        self.assertTrue(tagger.belongs_to_ntf(vmi))
 
     def _check_vpg_contains_vmi_ref(self, vpg, vmi_uuid):
         vmi_refs = vpg.get_virtual_machine_interface_refs() or ()

@@ -19,7 +19,7 @@ from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
 from networking_opencontrail.repository.utils.irb import \
     select_physical_routers_for_irb
-from networking_opencontrail.repository.utils.tag import ml2_tag_manager
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_project
 
 from networking_opencontrail import resources
@@ -35,8 +35,6 @@ def create(q_router):
 
     attach_physical_routers(router)
 
-    ml2_tag_manager.tag(router)
-
     tf_client.create_logical_router(router)
     LOG.info('Logical Router %s created in TF.', router.get_uuid())
 
@@ -48,12 +46,12 @@ def delete(router_id):
     if router is None:
         return
 
-    if not ml2_tag_manager.check(router):
-        LOG.debug('Logical Router %s has no ML2 tag - skipping.', router_id)
+    if not tagger.belongs_to_ntf(router_id):
+        LOG.info("%s was not created by NTF - skipping", router_id.name)
         return
 
     tf_client.delete_logical_router(uuid=router_id)
-    LOG.info('Logical Router %s deleted from TF.', router_id)
+    LOG.info('Logical Router %s deleted from TF.', router.name)
 
 
 @reconnect
@@ -81,7 +79,6 @@ def add_interface(q_router, q_port):
     lr_vmi = resources.lr_vmi.create(
         q_port['id'], project, network, router.name)
     lr_vmi.set_virtual_network(network)
-    ml2_tag_manager.tag(lr_vmi)
 
     tf_client.create_vmi(lr_vmi)
     LOG.info('VMI for router interface %s created in TF.', lr_vmi.get_uuid())
@@ -109,8 +106,9 @@ def remove_interface(router_id, q_port):
         LOG.debug('Could not delete VMI %s - not found', q_port['id'])
         return
 
-    if not ml2_tag_manager.check(lr_vmi):
-        LOG.debug('VMI %s has no ML2 tag - skipping.', lr_vmi.get_uuid())
+    if not tagger.belongs_to_ntf(lr_vmi):
+        LOG.debug(
+            'VMI %s doesn not belong to NTF - skipping.', lr_vmi.get_uuid())
         return
 
     router.del_virtual_machine_interface(lr_vmi)

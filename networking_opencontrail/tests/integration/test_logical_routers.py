@@ -13,7 +13,7 @@
 # under the License.
 import uuid
 
-from networking_opencontrail.repository.utils.tag import ml2_tag_manager
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.tests.base import FabricTestCase
 
 
@@ -77,10 +77,10 @@ class TestLogicalRouterBase(FabricTestCase):
             'uuid': tf_router.get_uuid(),
             'project_id': tf_router.parent_uuid,
             'lr_type': tf_router.get_logical_router_type(),
-            'tag_fq_name': tf_router.get_tag_refs()[0]['to'],
         }
         expected_physical_routers = expected.pop('physical_routers')
         self.assertDictEqual(tf_dict, expected)
+        self.assertTrue(tagger.belongs_to_ntf(tf_router))
         actual_physical_routers = sorted(
             pr_ref['to'][-1]
             for pr_ref in tf_router.get_physical_router_refs()
@@ -141,7 +141,6 @@ class TestLogicalRouterCRB(TestLogicalRouterBase):
             'project_id': str(uuid.UUID(q_router.get('project_id'))),
             'lr_type': 'vxlan-routing',
             'physical_routers': ['qfx-spine-1', 'qfx-spine-2'],
-            'tag_fq_name': ml2_tag_manager.FQ_NAME,
         }
         self.assert_tf_router(router_id=q_router['id'], expected=expected)
 
@@ -192,7 +191,6 @@ class TestLogicalRouterERB(TestLogicalRouterBase):
             'project_id': str(uuid.UUID(q_router.get('project_id'))),
             'lr_type': 'vxlan-routing',
             'physical_routers': sorted(['qfx-leaf-1', 'qfx-leaf-2']),
-            'tag_fq_name': ml2_tag_manager.FQ_NAME,
         }
         self.assert_tf_router(router_id=q_router['id'], expected=expected)
 

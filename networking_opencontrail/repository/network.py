@@ -17,7 +17,7 @@ from oslo_log import log as logging
 
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
-from networking_opencontrail.repository.utils.tag import ml2_tag_manager
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_project
 from networking_opencontrail import resources
 
@@ -36,24 +36,30 @@ def create(q_network):
     network = resources.network.create(
         q_network=q_network, project=project)
 
-    ml2_tag_manager.tag(network)
-
     tf_client.create_network(network)
 
 
 @reconnect
 def update(old_q_network, q_network):
     project = request_project(old_q_network)
-    old_network = resources.network.create(
+    network = resources.network.create(
         q_network=old_q_network, project=project)
-    network = resources.network.update(
-        old_network=old_network, q_network=q_network)
+
+    if not tagger.belongs_to_ntf(old_q_network):
+        LOG.info("%s was not created by NTF - skipping", old_q_network.name)
+        return
+
+    network.display_name = q_network['name']
 
     tf_client.update_network(network)
 
 
 @reconnect
 def delete(q_network):
-    network_id = q_network['id']
+    network = tf_client.read_network(q_network['id'])
 
-    tf_client.delete_network(uuid=network_id)
+    if not tagger.belongs_to_ntf(network):
+        LOG.info("%s was not created by NTF - skipping", network.name)
+        return
+
+    tf_client.delete_network(uuid=network.uuid)

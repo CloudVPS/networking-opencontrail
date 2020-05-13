@@ -25,6 +25,9 @@ from networking_opencontrail import resources
 LOG = logging.getLogger(__name__)
 
 
+DEFAULT_IPAM_NAME = "default-network-ipam"
+
+
 @reconnect
 def create(q_subnet):
     project = request_project(q_subnet)
@@ -34,10 +37,13 @@ def create(q_subnet):
 
     ipam_refs = network.get_network_ipam_refs()
     if not ipam_refs:
-        ipam = tf_client.read_default_ipam(project)
+        ipam = _get_default_ipam(project)
         vn_subnets = vnc_api.VnSubnetsType([subnet])
         network.add_network_ipam(ipam, vn_subnets)
     else:
+        if len(ipam_refs) > 1:
+            LOG.warning('Network %s has more than 1 Network IPAM. \
+                Subnet will be attached to the first one.', network.name)
         vn_subnets = ipam_refs[0]['attr']
         vn_subnets.ipam_subnets.append(subnet)
         network._pending_field_updates.add('network_ipam_refs')
@@ -73,3 +79,20 @@ def _delete_from_network(network, q_subnet):
 
     network._pending_field_updates.add('network_ipam_refs')
     tf_client.update_network(network)
+
+
+def _get_default_ipam(project):
+    ipam = _read_default_ipam(project)
+    if ipam is None:
+        return _create_default_ipam(project)
+    return ipam
+
+
+def _create_default_ipam(project):
+    ipam = vnc_api.NetworkIpam(DEFAULT_IPAM_NAME, parent_obj=project)
+    tf_client.create_network_ipam(ipam)
+
+
+def _read_default_ipam(project):
+    ipam_fq_name = project.fq_name + [DEFAULT_IPAM_NAME]
+    return tf_client.read_network_ipam(fq_name=ipam_fq_name)

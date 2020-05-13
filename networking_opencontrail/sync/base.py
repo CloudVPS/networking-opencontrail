@@ -15,14 +15,11 @@
 
 import abc
 
-from networking_opencontrail import repository
-
 from neutron_lib import context
 from neutron_lib.plugins import directory
-
 from oslo_log import log as logging
-
 import six
+
 
 LOG = logging.getLogger(__name__)
 
@@ -95,7 +92,7 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
             resource
             for resource in tf_resources
             if resource.get_uuid() in res_ids_to_delete
-            and not self._ignore_tf_resource(resource)
+            and not self._ignore_non_ntf_resource(resource)
         ]
         self.to_create = [
             resource
@@ -170,7 +167,8 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
         """
         return False
 
-    def _ignore_tf_resource(self, resource):
+    # TODO(Ignacy): Rename this function according to its puprose.
+    def _ignore_non_ntf_resource(self, resource):
         """Tell if TF resource should be ignored.
 
         Child class should provide the implementation that allows certain
@@ -183,10 +181,6 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
         :rtype: bool
         """
         return False
-
-    @staticmethod
-    def _no_ml2_tag(resource):
-        return not repository.ml2_tag_manager.check(resource)
 
     @abc.abstractmethod
     def _get_tf_resources(self):

@@ -23,10 +23,9 @@ class NetworkSynchronizerTestCase(base.TestCase):
     def setUp(self):
         super(NetworkSynchronizerTestCase, self).setUp()
 
-    @mock.patch("networking_opencontrail.sync.base.repository.ml2_tag_manager")
     @mock.patch("networking_opencontrail.sync.base.directory.get_plugin")
     @mock.patch("networking_opencontrail.sync.synchronizers.repository")
-    def test_calculate_diff(self, repository, core_plugin, ml2_tag_manager):
+    def test_calculate_diff(self, repository, core_plugin):
         # Exists both in Neutron and TF config API.
         n_network_1 = {
             "id": "net-id-1",
@@ -61,12 +60,6 @@ class NetworkSynchronizerTestCase(base.TestCase):
         tf_network_ignore = vnc_api.VirtualNetwork(name="net-4")
         tf_network_ignore.set_uuid("net-id-4")
 
-        # Simulating no ML2 tag - should be ignored
-        tf_network_no_tag = vnc_api.VirtualNetwork(name="net-4",
-                                                   parent_obj=project)
-        tf_network_no_tag.set_uuid("net-id-5")
-        ml2_tag_manager.check.side_effect = lambda x: x.name != "net-4"
-
         core_plugin.return_value.get_networks.return_value = [
             n_network_1,
             n_network_2,
@@ -76,7 +69,6 @@ class NetworkSynchronizerTestCase(base.TestCase):
             tf_network_1,
             tf_network_3,
             tf_network_ignore,
-            tf_network_no_tag,
         ]
 
         synchronizer = NetworkSynchronizer()

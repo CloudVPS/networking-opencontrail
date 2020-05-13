@@ -18,7 +18,6 @@ from requests.exceptions import ConnectionError
 
 from networking_opencontrail.common.utils import register_vnc_api_options
 from networking_opencontrail.repository.utils.client import tf_client
-from networking_opencontrail.repository.utils.tag import ml2_tag_manager
 
 
 def initialize():
@@ -31,12 +30,7 @@ def connect():
     Performs steps required to ensure connection and necessary post
     connection setup.
     """
-
-    if tf_client.connected:
-        return
-
     tf_client.connect()
-    ml2_tag_manager.initialize()
 
 
 def reconnect(fun):

@@ -61,3 +61,6 @@ releasenotes/build
 # Environment specific project configs
 playbooks/hosts
 playbooks/group_vars/all.yml
+
+# IDE related files
+*.vscode/*

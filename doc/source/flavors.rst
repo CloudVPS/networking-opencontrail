@@ -28,11 +28,14 @@ Registry flavor
 ---------------
 
 Flavor, and profile for them, must be created and connected in neutron by CLI.
+Remember to use Keystone.
 In OpenStack console::
 
+    systemctl restart neutron-server
     openstack network flavor profile create --driver networking_opencontrail.l3.service_provider.TFL3ServiceProvider
     openstack network flavor create --service-type L3_ROUTER_NAT tf
     openstack network flavor add profile tf <flavorprofileid>
+    systemctl restart neutron-server
 
 Where ``tf`` is an arbitrary name and ``<flavorprofileid>`` should be replaced
 with an uuid from flavor profile create output.

@@ -18,7 +18,8 @@ from neutron_lib.plugins import directory
 
 from networking_opencontrail.common import utils
 from networking_opencontrail.repository.utils.client import tf_client
-from networking_opencontrail.repository.utils.tag import ml2_tag_manager
+from networking_opencontrail.repository.utils.initialize import reconnect
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_project
 from networking_opencontrail import resources
 
@@ -32,6 +33,7 @@ REQUIRED_PORT_FIELDS = [
 ]
 
 
+@reconnect
 def create(q_port, q_network):
     try:
         resources.vmi.validate(q_port, q_network)
@@ -52,6 +54,7 @@ def create(q_port, q_network):
     create_from_tf_data(project, network, node_name, vlan_id)
 
 
+@reconnect
 def delete(q_port, q_network, context):
     try:
         resources.vmi.validate(q_port, q_network)
@@ -73,15 +76,15 @@ def delete(q_port, q_network, context):
         LOG.error("Couldn't find VMI for q_port %s", q_port["id"])
         return
 
-    if not ml2_tag_manager.check(vmi):
-        LOG.info(
-            "%s is not tagged with label=__ML2__ tag - skipping", vmi_name)
+    if not tagger.belongs_to_ntf(vmi):
+        LOG.info("%s was not created by NTF - skipping", vmi.name)
         return
 
     detach_from_vpg(vmi)
     tf_client.delete_vmi(uuid=vmi.uuid)
 
 
+@reconnect
 def vmi_exists(network_uuid, node_name):
     vmi_name = resources.vmi.make_name(network_uuid, node_name)
     vmi_uuid = utils.make_uuid(vmi_name)
@@ -90,10 +93,9 @@ def vmi_exists(network_uuid, node_name):
     return bool(vmi)
 
 
+@reconnect
 def create_from_tf_data(project, network, node_name, vlan_id):
     vmi = resources.vmi.create(project, network, node_name, vlan_id)
-
-    ml2_tag_manager.tag(vmi)
 
     tf_client.create_vmi(vmi)
 

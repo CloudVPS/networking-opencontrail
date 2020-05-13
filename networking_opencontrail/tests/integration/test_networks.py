@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from networking_opencontrail.repository import ml2_tag_manager
+from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.tests.base import IntegrationTestCase
 
 
@@ -78,8 +78,7 @@ class TestManageNetwork(IntegrationTestCase):
         q_network = wrapped_q_network['network']
 
         network = self.tf_get('virtual-network', q_network['id'])
-        network_tag_fq_name = network.get_tag_refs()[0]['to']
-        self.assertEqual(network_tag_fq_name, ml2_tag_manager.FQ_NAME)
+        self.assertTrue(tagger.belongs_to_ntf(network))
 
     def test_updated_network_is_tagged(self):
         network_schema = {
@@ -97,5 +96,4 @@ class TestManageNetwork(IntegrationTestCase):
 
         network = self.tf_get('virtual-network',
                               wrapped_q_network['network']['id'])
-        network_tag_fq_name = network.get_tag_refs()[0]['to']
-        self.assertEqual(network_tag_fq_name, ml2_tag_manager.FQ_NAME)
+        self.assertTrue(tagger.belongs_to_ntf(network))
