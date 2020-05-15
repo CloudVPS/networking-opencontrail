@@ -155,6 +155,35 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
                 self.to_create
             )
 
+    def _ignore_neutron_resource(self, resource):
+        """Tell if Neutron resource should be ignored.
+
+        Child class should provide the implementation that allows certain
+        Neutron resources to be ignored during sync.
+
+        By default it returns False, so that no Neutron resource gets ignored.
+
+        :param resource: Neutron resource
+        :type: dict
+        :return: True for each resource that needs to be ignored.
+        :rtype: bool
+        """
+        return False
+
+    def _ignore_tf_resource(self, resource):
+        """Tell if TF resource should be ignored.
+
+        Child class should provide the implementation that allows certain
+        TF resources to be ignored during sync.
+
+        By default it returns False, so that no TF resource gets ignored.
+
+        :param resource: TF resource
+        :return: True for each resource that needs to be ignored.
+        :rtype: bool
+        """
+        return False
+
     @staticmethod
     def _no_ml2_tag(resource):
         return not repository.ml2_tag_manager.check(resource)
@@ -204,32 +233,5 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
 
         :param resource_id: Resource's UUID
         :type: str
-        """
-        pass
-
-    @abc.abstractmethod
-    def _ignore_neutron_resource(self, resource):
-        """Tell if Neutron resource should be ignored.
-
-        Child class should provide the implementation that allows certain
-        Neutron resources to be ignored during sync.
-
-        :param resource: Neutron resource
-        :type: dict
-        :return: True for each resource that needs to be ignored.
-        :rtype: bool
-        """
-        pass
-
-    @abc.abstractmethod
-    def _ignore_tf_resource(self, resource):
-        """Tell if TF resource should be ignored.
-
-        Child class should provide the implementation that allows certain
-        TF resources to be ignored during sync.
-
-        :param resource: TF resource
-        :return: True for each resource that needs to be ignored.
-        :rtype: bool
         """
         pass
