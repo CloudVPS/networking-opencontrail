@@ -43,7 +43,6 @@ class UtilsTestCases(test_extensions_base.ExtensionTestCase):
 
         expected_calls = [
             mock.call(mock.ANY, 'APISERVER'),
-            mock.call(mock.ANY, 'DM_INTEGRATION')
         ]
         register.assert_has_calls(expected_calls)
 

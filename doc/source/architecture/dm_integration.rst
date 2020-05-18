@@ -6,7 +6,7 @@ Plugin can trigger Device Manager to automatically manage underlay: VLAN tags on
 switch interfaces and VXLAN. Using this, compute hosts can be dynamically
 connected to VLANs used by virtual machines that run on them.
 
-Networking-opencontrail triggers DM by creating a *virtual machine interface*
+Networking-opencontrail triggers DM by creating a *virtual-machine-interface* (VMI)
 in Tungsten Fabric for each affected VM, that contains references
 to the bindings for physical interfaces that need to be configured.
 A single VMI is created on every for each network that has at least on VM connected it.
@@ -27,66 +27,72 @@ It is important that each node needs to have the same name as used by Open Stack
 any port that is connected to switch needs to have reference to the corresponding physical
 interface object. Ports without PI refs will be ignored.
 
-When topology is provided from file, representation of compute hosts/ports
-as ``node``/``port`` objects is not necessary, but still every switch interface
-has to be a ``physical interface`` in TF and each of the node names has to be
-the same as those used by Open Stack.
-
-To use VXLAN encapsulation vRouter must be configured to use it as a default.
-
 .. seealso::
 
     How to configure plugin for DM integration is described on page
     :doc:`../device_manager`. Onboarding fabric is out-of-scope of this
     document.
 
-Integration flow
-================
 
-When DM integration is enabled, on startup the plugin tries to load topology from a file
-if path to it was given.
+VPG and VMI
+===========
 
-Then, plugin calls methods for integration during ``update_port_postcommit``
-in ML2 framework. First, if the compute host, network or VM id has changed,
-plugin checks if it is safe to delete old DM-related VMI. Check includes
-checking if any other VM on this compute host is connected to the network
-assigned to this VMI. If none is found VMI is deleted.
-Next it checks if current port is connected to a VM on a host that exists in the
-topology (in topology file or when file is not given, in TF API) and a VLAN virtual network.
+VMI is per tuple (network, node) and contains:
+    * name created from template ``vmi#<network_uuid>#<node_name>``
+    * ``virtual_port_group_back_refs`` list that contains VPG of the node
+    * ``virtual_network_refs`` list that contains the network
+    * ``sub_interface_vlan_tag`` property with VLAN tag value
+    * ``profile bindings`` dictionary that contains list of affected switches,
+      their interfaces, fabric name and VPG name (if VPG object exists)
 
-When DM should be informed about this VM, plugin checks if related VMI not
-exists yet. If not, creates a new VMI in TF that has:
-
-* reference to virtual network (created previous by networking-opencontrail),
-* ``sub_interface_vlan_tag`` property with VLAN tag value,
-* name created from template ``_vlan_tag_for_vn_<vn-uuid>_compute_<compute_id>``,
-* ``profile bindings`` dictionary that contains list of affected switches,
-  their interfaces, fabric name and VPG name (if VPG object exists).
-
-Fabric name for any switch is read from API. For selecting a VPG, plugin check
-if there exists any auto-created VPG that has a reference to every physical interface
-which is connected to this compute. If it does not exist, VPG name will not be listed in binding
-and it should be created automatically by TF.
-
-On ``delete_port_postcommit`` in ML2 framework, plugin deletes DM-related
-VMI if it exists and no VM on the compute is connected to the network it references.
+VPG is per node (openstack compute) and contains:
+    * name created from template ``vpg#<node_name>``,
+    * ``physical_interface_refs`` list that contains all physical interfaces to which the node is connected
+    * ``virtual_machine_interface_refs`` list that contains all VMIs of the node
 
 .. note::
-
     VPG is a ``virtual port group`` object in TF that groups physical
     interfaces. This provide support for both LAG and multihoming. More about
     them you can read in `Juniper VPG documentation <vpg_doc_>`_.
 
     .. _vpg_doc: https://www.juniper.net/documentation/en_US/contrail5.1/topics/concept/contrail-virtual-port-groups.html
 
+
+Integration flow
+================
+
+Plugin calls methods for managing VPGs and VMIs during ``create_port_postcommit``,
+``update_port_postcommit`` and ``delete_port_postcommit`` actions in ML2 framework.
+
+On ``create_port_postcommit``:
+    #. Check if the port needs VPG. If the answer is yes, then create VPG if not exists yet.
+    #. Check if the port needs VMI. If the answer is yes, then create VMI if not exists yet.
+
+On ``delete_port_postcommit``:
+    #. Check if the any other ports needs VMI used by the removed port. If the answer is no, then delete this VMI.
+    #. Check if the any other ports needs VPG used by the removed port. If the answer is no, then delete this VPG.
+
+On ``update_port_postcommit``:
+    #. Exec the 'delete_port_postcommit' logic for the old port.
+    #. Exec the 'create_port_postcommit' logic for the new port.
+
+Note: If port update does not impact the VMI/VPG state (network/host did not change), it will be ignored.
+
+Port need VMI and VPG if:
+    * port owner is compute (field 'device_owner' has a prefix 'compute:')
+    * port has binding (field 'binding:host_id' exists)
+    * port has network (field 'network_id' exists)
+    * port network has VLAN ID (q_network has field 'provider:segmentation_id')
+
 Expected result
 ===============
 
-After creating VMI, the plugin has no more work left to do. After a while it is expected
-that related switches will be configured to have VLAN tagging on specific ports
-and VXLAN. Each VLAN tag is selected by plugin (from Open Stack VLAN virtual
-network), whereas VXLAN id is managed by Tungsten Fabric (typically this is
-value of ``virtual_network_network_id`` property from virtual network in TF).
+After ensuring the existence of the appropriate VMIs and VPGs, the plugin has
+no more work left to do. After a while it is expected that related switches
+will be configured to have VLAN tagging on specific ports and VXLAN. Each VLAN
+tag is selected by plugin (from Open Stack VLAN virtual network), whereas VXLAN
+id is managed by Tungsten Fabric (typically this is value of
+``virtual_network_network_id`` property from virtual network in TF).
 
 Expected switch configuration looks like (on QFX)::
 
@@ -122,8 +128,4 @@ Known limitations
 =================
 
 There is a few not supported cases:
-
-* when network change VLAN tag, existing VMI are not updated,
-* when topology file is changed, plugin needs to be restarted to reload
-  topology.
-* any topology change doesn't affect existing VMI.
+    * when network change VLAN tag, existing VMI are not updated,

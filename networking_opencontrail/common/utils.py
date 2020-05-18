@@ -57,7 +57,6 @@ dm_integration_opts = [
 def register_vnc_api_options():
     """Register Contrail Neutron core plugin configuration flags"""
     cfg.CONF.register_opts(vnc_opts, 'APISERVER')
-    cfg.CONF.register_opts(dm_integration_opts, 'DM_INTEGRATION')
 
 
 def vnc_api_is_authenticated():

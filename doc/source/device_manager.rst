@@ -25,23 +25,6 @@ Prerequisites
 
     .. _fabric_doc: https://www.juniper.net/documentation/en_US/contrail5.0/topics/task/configuration/ems-capabilities-on-physical-network-elements.html#id-fabric-management
 
-Enable integration
-------------------
-
-Configuration options are inside group ``DM_INTEGRATION`` in plugin config
-file, typically in ``/etc/neutron/plugins/ml2/ml2_conf_opencontrail.ini``
-
-There is one option:
-
-* ``enabled`` is boolean and should be set to ``True`` to enable integration
-  with Device Manager; default value is ``False``,
-
-
-.. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
-   :language: ini
-   :lines: 5-6
-
-After changing configuration restart Open Stack service.
 
 Describing topology
 -------------------
