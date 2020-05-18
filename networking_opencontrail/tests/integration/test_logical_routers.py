@@ -237,3 +237,67 @@ class TestLogicalRouterCommon(TestLogicalRouterBase):
         tf_router = self.tf_get('logical-router', q_router['id'])
 
         self.assertIsNone(tf_router)
+
+
+class TestLogicalRouterInterfaces(TestLogicalRouterBase):
+    """Integration tests for router interfaces management.
+
+    Following scenario is tested:
+    1. Test adding and removing interfaces to Logical Router:
+        - Create a test network+subnet+port+router in Neutron.
+        - Attach the port to the router as its interface.
+        - Verify that a VMI connecting the LR with the VN is created in TF.
+        - Remove the interface from the router in Neutron.
+        - Verify that VMI was deleted from TF.
+    """
+
+    def test_add_and_remove_interface(self):
+        router = {
+            'name': 'test-router',
+            'admin_state_up': True,
+            'flavor_id': self.test_flavor['id'],
+        }
+        q_router = self.q_create_logical_router(router)['router']
+
+        network = {
+            'name': 'test-lr-network',
+            'admin_state_up': True,
+            'provider:network_type': 'local',
+        }
+        q_network = self.q_create_network(**network)['network']
+
+        subnet = {
+            'name': 'test-subnet',
+            'cidr': '10.10.11.0/24',
+            'network_id': q_network['id'],
+            'gateway_ip': '10.10.11.1',
+            'ip_version': 4,
+        }
+        q_subnet = self.q_create_subnet(**subnet)['subnet']
+
+        response = self.add_router_interface(q_router, q_subnet)
+
+        vmi = self.tf_get('virtual-machine-interface', response['port_id'])
+
+        self.assertIsNotNone(vmi)
+
+        lr_back_refs = vmi.get_logical_router_back_refs() or ()
+        self.assertEqual(len(lr_back_refs), 1)
+        self.assertEqual(lr_back_refs[0]['uuid'], q_router['id'])
+
+        vn_refs = vmi.get_virtual_network_refs() or ()
+        self.assertIsNotNone(len(lr_back_refs), 1)
+        self.assertEqual(vn_refs[0]['uuid'], q_network['id'])
+
+        self.remove_router_interface(q_router, q_subnet)
+
+        vmi = self.tf_get('virtual-machine-interface', response['port_id'])
+        self.assertIsNone(vmi)
+
+    def add_router_interface(self, router, subnet):
+        subnet_info = {'subnet_id': subnet['id']}
+        return self.neutron.add_interface_router(router['id'], subnet_info)
+
+    def remove_router_interface(self, router, subnet):
+        subnet_info = {'subnet_id': subnet['id']}
+        return self.neutron.remove_interface_router(router['id'], subnet_info)

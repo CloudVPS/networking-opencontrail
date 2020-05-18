@@ -30,6 +30,21 @@ from networking_opencontrail.sync.base import ResourceSynchronizer
 LOG = logging.getLogger(__name__)
 
 
+def list_q_ports():
+    core_plugin = directory.get_plugin()
+    admin_context = context.get_admin_context()
+    filters = {'device_owner': ['compute:nova']}
+    q_ports = core_plugin.get_ports(admin_context, filters=filters)
+    return q_ports
+
+
+def list_q_networks():
+    core_plugin = directory.get_plugin()
+    admin_context = context.get_admin_context()
+    q_networks = core_plugin.get_networks(admin_context)
+    return q_networks
+
+
 class NetworkSynchronizer(OneToOneResourceSynchronizer):
     """A Network Synchronizer class.
 
@@ -69,8 +84,8 @@ class VPGSynchronizer(ResourceSynchronizer):
             "Synchronisation should be run through VPGAndVMISynchronizer")
 
     def calculate_diff(self):
-        q_networks = self._list_q_networks()
-        q_ports = self._list_q_ports()
+        q_networks = list_q_networks()
+        q_ports = list_q_ports()
         vpg_names_from_q_data = \
             resources.vpg.make_names_from_q_data(q_ports, q_networks)
 
@@ -95,6 +110,12 @@ class VPGSynchronizer(ResourceSynchronizer):
     def delete_vpgs_from_tf(vpg_names):
         for vpg_name in vpg_names:
             vpg_uuid = utils.make_uuid(vpg_name)
+
+            vpg = repository.tf_client.read_vpg(uuid=vpg_uuid)
+            if vpg is None:
+                LOG.debug("Couldn't delete VPG %s - not found", vpg_uuid)
+                return
+
             repository.tf_client.delete_vpg(uuid=vpg_uuid)
 
     @staticmethod
@@ -117,22 +138,6 @@ class VPGSynchronizer(ResourceSynchronizer):
 
         repository.tf_client.update_vpg(vpg)
 
-    def _list_q_ports(self):
-        q_ports = self._core_plugin.get_ports(self._context)
-        return q_ports
-
-    def _list_q_networks(self):
-        q_networks = self._core_plugin.get_networks(self._context)
-        return q_networks
-
-    @property
-    def _core_plugin(self):
-        return directory.get_plugin()
-
-    @property
-    def _context(self):
-        return context.get_admin_context()
-
 
 class VMISynchronizer(ResourceSynchronizer):
     """A Virtual Machine Interface Synchronizer class.
@@ -146,8 +151,8 @@ class VMISynchronizer(ResourceSynchronizer):
             "Synchronisation should be run through VPGAndVMISynchronizer")
 
     def calculate_diff(self):
-        q_networks = self._list_q_networks()
-        q_ports = self._list_q_ports()
+        q_networks = list_q_networks()
+        q_ports = list_q_ports()
         vmi_names_from_q_data = \
             resources.vmi.make_names_from_q_data(q_ports, q_networks)
 
@@ -172,7 +177,11 @@ class VMISynchronizer(ResourceSynchronizer):
     def delete_vmis_from_tf(vmi_names):
         for vmi_name in vmi_names:
             vmi_uuid = utils.make_uuid(vmi_name)
+
             vmi = repository.tf_client.read_vmi(uuid=vmi_uuid)
+            if vmi is None:
+                LOG.debug("Couldn't delete VMI %s - not found", vmi_uuid)
+                return
 
             repository.vmi.detach_from_vpg(vmi)
             repository.tf_client.delete_vmi(uuid=vmi_uuid)
@@ -201,22 +210,6 @@ class VMISynchronizer(ResourceSynchronizer):
         vlan_id = q_network.get('provider:segmentation_id')
         repository.vmi.create_from_tf_data(
             project, network, node_name, vlan_id)
-
-    def _list_q_ports(self):
-        q_ports = self._core_plugin.get_ports(self._context)
-        return q_ports
-
-    def _list_q_networks(self):
-        q_networks = self._core_plugin.get_networks(self._context)
-        return q_networks
-
-    @property
-    def _core_plugin(self):
-        return directory.get_plugin()
-
-    @property
-    def _context(self):
-        return context.get_admin_context()
 
 
 class VPGAndVMISynchronizer(ResourceSynchronizer):

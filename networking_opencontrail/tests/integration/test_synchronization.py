@@ -120,7 +120,7 @@ class TestVPGSynchronization(SynchronizationTestCase):
             "name": "test_fabric_port",
             "network_id": self.test_network["network"]["id"],
             "binding:host_id": "compute-node",
-            "device_owner": "compute:fake-nova"
+            "device_owner": "compute:nova"
         }
         self.q_create_port(**port)
 
@@ -188,7 +188,7 @@ class TestVMISynchronization(SynchronizationTestCase):
             "name": "test_fabric_port",
             "network_id": self.test_network["network"]["id"],
             "binding:host_id": "compute-node",
-            "device_owner": "compute:fake-nova"
+            "device_owner": "compute:nova"
         }
         self.q_create_port(**port)
 
@@ -259,7 +259,7 @@ class TestVPGAndVMISynchronization(SynchronizationTestCase):
             "name": "test_fabric_port",
             "network_id": self.test_network["network"]["id"],
             "binding:host_id": "compute-node",
-            "device_owner": "compute:fake-nova"
+            "device_owner": "compute:nova"
         }
         self.q_create_port(**port)
 

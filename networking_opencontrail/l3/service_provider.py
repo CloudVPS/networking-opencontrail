@@ -46,6 +46,16 @@ def validate_flavor(provider_name, router, context):
     return str(provider['driver']) == provider_name
 
 
+def get_port(context, port_id):
+    core_plugin = directory.get_plugin()
+    return core_plugin.get_port(context, port_id)
+
+
+def get_router(context, router_id):
+    router_plugin = directory.get_plugin(plugin_constants.L3)
+    return router_plugin.get_router(context, router_id)
+
+
 @registry.has_registry_receivers
 class TFL3ServiceProvider(base.L3ServiceProvider):
     """L3 Service Provider class for Tungsten Fabric
@@ -69,6 +79,17 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
             return
         repository.router.create(router)
 
+    @registry.receives(resources.ROUTER, [events.ABORT_CREATE])
+    @log_helpers.log_method_call
+    def router_abort_create(self, resource, event, trigger, **kwargs):
+        """Deletes LR from TF DB when creation is aborted."""
+        router = kwargs['router']
+        context = kwargs['context']
+        if not validate_flavor(self.provider_name, router, context):
+            LOG.debug('Skipping router not managed by TF (%s)', router['id'])
+            return
+        repository.router.delete(router['id'])
+
     @registry.receives(resources.ROUTER, [events.BEFORE_DELETE])
     @log_helpers.log_method_call
     def router_delete(self, resource, event, trigger, **kwargs):
@@ -80,13 +101,82 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
             return
         repository.router.delete(router_id)
 
-    @registry.receives(resources.ROUTER, [events.ABORT_CREATE])
+    @registry.receives(resources.ROUTER, [events.ABORT_DELETE])
     @log_helpers.log_method_call
-    def router_abort_create(self, resource, event, trigger, **kwargs):
-        """Deletes LR from TF DB when creation is aborted."""
-        router = kwargs['router']
+    def router_abort_delete(self, resource, event, trigger, **kwargs):
+        """Recreates LR in TF DB when deleting is aborted."""
+        router_id = kwargs['router_id']
         context = kwargs['context']
-        if not validate_flavor(self.provider_name, router, context):
+        if not self.owns_router(context, router_id):
+            LOG.debug('Skipping router not managed by TF (%s)', router_id)
+            return
+        router = get_router(context, router_id)
+        repository.router.create(router)
+
+    @registry.receives(resources.ROUTER_INTERFACE, [events.BEFORE_CREATE])
+    @log_helpers.log_method_call
+    def router_add_interface(self, resource, event, trigger, **kwargs):
+        """Creates VMI in TF for a LR interface and attaches it to LR."""
+        context = kwargs['context']
+        router = kwargs['router_db']
+        port = kwargs['port']
+        if not self.owns_router(context, router['id']):
             LOG.debug('Skipping router not managed by TF (%s)', router['id'])
             return
-        repository.router.delete(router['id'])
+        repository.router.add_interface(router, port)
+
+    @registry.receives(resources.ROUTER_INTERFACE, [events.ABORT_CREATE])
+    @log_helpers.log_method_call
+    def router_abort_add_interface(self, resource, event, trigger, **kwargs):
+        """Deletes LR VMI from TF DB when adding interface is aborted."""
+        context = kwargs['context']
+        router = kwargs['router_db']
+        port = kwargs['port']
+        if not self.owns_router(context, router['id']):
+            LOG.debug('Skipping router not managed by TF (%s)', router['id'])
+            return
+        repository.router.remove_interface(router['id'], port)
+
+    @registry.receives(resources.PORT, [events.BEFORE_DELETE])
+    @log_helpers.log_method_call
+    def router_remove_interface(self, resource, event, trigger, **kwargs):
+        """Deletes the LR VMI from TF.
+
+        Router interface callback only provides router_id and subnet_id.
+        Because of this, this callback reacts to port being deleted instead of
+        router interface, since it's more convenient to find the VMI that needs
+        to be deleted based on information this event provides.
+        """
+        context = kwargs['context']
+        port_id = kwargs['port_id']
+        port = get_port(context, port_id)
+        if port['device_owner'] != 'network:router_interface':
+            return
+        router_id = port['device_id']
+        if not self.owns_router(context, router_id):
+            LOG.debug('Skipping router not managed by TF (%s)', router_id)
+            return
+        repository.router.remove_interface(router_id, port)
+
+    @registry.receives(resources.PORT, [events.ABORT_DELETE])
+    @log_helpers.log_method_call
+    def router_abort_remove_interface(
+            self, resource, event, trigger, **kwargs):
+        """Recreates the LR VMI in TF when removing interface is aborted.
+
+        Router interface callback only provides router_id and subnet_id.
+        Because of this, this callback reacts to port being deleted instead of
+        router interface, since it's more convenient to recreate the VMI based
+        on information this event provides.
+        """
+        context = kwargs['context']
+        port_id = kwargs['port_id']
+        port = get_port(context, port_id)
+        if port['device_owner'] != 'network:router_interface':
+            return
+        router_id = port['device_id']
+        if not self.owns_router(context, router_id):
+            LOG.debug('Skipping router not managed by TF (%s)', router_id)
+            return
+        router = get_router(context, router_id)
+        repository.router.add_interface(router, port)

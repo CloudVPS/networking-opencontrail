@@ -108,6 +108,9 @@ class TFClient(object):
     def create_vmi(self, vmi):
         self.session.virtual_machine_interface_create(vmi)
 
+    def update_vmi(self, vmi):
+        self.session.virtual_machine_interface_update(vmi)
+
     def delete_vmi(self, uuid=None, fq_name=None):
         self.session.virtual_machine_interface_delete(id=uuid, fq_name=fq_name)
 
@@ -186,6 +189,9 @@ class TFClient(object):
 
     def create_logical_router(self, router):
         self.session.logical_router_create(router)
+
+    def update_logical_router(self, router):
+        self.session.logical_router_update(router)
 
     def delete_logical_router(self, uuid=None, fq_name=None):
         self.session.logical_router_delete(id=uuid, fq_name=fq_name)
