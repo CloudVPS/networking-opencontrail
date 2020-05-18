@@ -15,6 +15,7 @@
 from requests.exceptions import ConnectionError
 
 from networking_opencontrail.repository import network
+from networking_opencontrail.repository import router
 from networking_opencontrail.repository import subnet
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import connect
@@ -31,6 +32,7 @@ __all__ = [
     'vmi',
     'vpg',
     'subnet',
+    'router',
     'tf_client',
     'ml2_tag_manager',
     'ConnectionError',

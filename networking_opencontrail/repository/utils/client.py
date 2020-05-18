@@ -175,6 +175,18 @@ class TFClient(object):
             self.session.network_ipam_create(ipam)
             return self.session.network_ipam_read(ipam_fq_name)
 
+    def read_logical_router(self, uuid=None, fq_name=None):
+        try:
+            return self.session.logical_router_read(id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            return None
+
+    def create_logical_router(self, router):
+        self.session.logical_router_create(router)
+
+    def delete_logical_router(self, uuid=None, fq_name=None):
+        self.session.logical_router_delete(id=uuid, fq_name=fq_name)
+
     @property
     def connected(self):
         return self.session is not None

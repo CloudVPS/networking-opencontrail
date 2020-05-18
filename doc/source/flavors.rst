@@ -22,7 +22,7 @@ Service plugin::
 Service providers should be added at the end of file::
 
     [service_providers]
-    service_provider = L3_ROUTER_NAT:TF:networking_opencontrail.l3.l3_flavor.TFL3ServiceProvider
+    service_provider = L3_ROUTER_NAT:TF:networking_opencontrail.l3.service_provider.TFL3ServiceProvider
 
 Registry flavor
 ---------------
@@ -30,7 +30,7 @@ Registry flavor
 Flavor, and profile for them, must be created and connected in neutron by CLI.
 In OpenStack console::
 
-    openstack network flavor profile create --driver networking_opencontrail.l3.l3_flavor.TFL3ServiceProvider
+    openstack network flavor profile create --driver networking_opencontrail.l3.service_provider.TFL3ServiceProvider
     openstack network flavor create --service-type L3_ROUTER_NAT tf
     openstack network flavor add profile tf <flavorprofileid>
 

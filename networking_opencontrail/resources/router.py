@@ -13,11 +13,20 @@
 #    under the License.
 #
 
-from networking_opencontrail.resources import network
-from networking_opencontrail.resources import router
-from networking_opencontrail.resources import subnet
-from networking_opencontrail.resources import vmi
-from networking_opencontrail.resources import vpg
+from oslo_log import log as logging
+from vnc_api import vnc_api
 
 
-__all__ = ['network', 'vmi', 'vpg', 'subnet', 'router']
+LOG = logging.getLogger(__name__)
+LOGICAL_ROUTER_TYPE = 'vxlan-routing'
+
+
+def create(q_router, project):
+    router_name = q_router['name']
+    id_perms = vnc_api.IdPermsType(enable=True)
+    logical_router = vnc_api.LogicalRouter(
+        name=router_name, parent_obj=project, id_perms=id_perms)
+    logical_router.uuid = q_router['id']
+    logical_router.set_logical_router_type(LOGICAL_ROUTER_TYPE)
+
+    return logical_router
