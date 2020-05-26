@@ -29,6 +29,11 @@ LOG = logging.getLogger(__name__)
 
 
 @reconnect
+def list_all():
+    return tf_client.list_logical_routers()
+
+
+@reconnect
 def create(q_router):
     project = request_project(q_router)
     router = resources.router.create(q_router, project)
@@ -55,15 +60,15 @@ def delete(router_id):
 
 
 @reconnect
-def add_interface(q_router, q_port):
+def add_interface(router_id, q_port):
     project = request_project(q_port)
 
-    router = tf_client.read_logical_router(q_router['id'])
+    router = tf_client.read_logical_router(router_id)
     if not router:
         LOG.warning(
             'Could not create router interface %s - router %s not found',
             q_port['id'],
-            q_router['id']
+            router_id
         )
         return
 
@@ -83,27 +88,27 @@ def add_interface(q_router, q_port):
     tf_client.create_vmi(lr_vmi)
     LOG.info('VMI for router interface %s created in TF.', lr_vmi.get_uuid())
 
-    router.set_virtual_machine_interface(lr_vmi)
+    router.add_virtual_machine_interface(lr_vmi)
     tf_client.update_logical_router(router)
     LOG.info('VMI %s (%s) attached to Logical Router %s',
              lr_vmi.get_uuid(), network.get_uuid(), router.get_uuid())
 
 
 @reconnect
-def remove_interface(router_id, q_port):
+def remove_interface(router_id, port_id):
     router = tf_client.read_logical_router(router_id)
     if not router:
         LOG.warning(
             'Could not delete router interface %s - router %s not found',
-            q_port['id'],
+            port_id,
             router_id
         )
         return
 
-    lr_vmi = tf_client.read_vmi(uuid=q_port['id'])
+    lr_vmi = tf_client.read_vmi(uuid=port_id)
 
     if not lr_vmi:
-        LOG.debug('Could not delete VMI %s - not found', q_port['id'])
+        LOG.debug('Could not delete VMI %s - not found', port_id)
         return
 
     if not tagger.belongs_to_ntf(lr_vmi):

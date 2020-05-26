@@ -30,13 +30,14 @@ LOG = logging.getLogger(__name__)
 
 
 class TFSyncWorker(worker.BaseWorker):
-    def __init__(self, device_types_to_omit):
+    def __init__(self):
         super(TFSyncWorker, self).__init__()
-        self.device_types_to_omit = device_types_to_omit
         self.synchronizers = [
             synchronizers.NetworkSynchronizer(),
             synchronizers.VPGAndVMISynchronizer(),
             synchronizers.SubnetSynchronizer(),
+            synchronizers.RouterSynchronizer(),
+            synchronizers.RouterInterfaceSynchronizer(),
         ]
         self._thread = None
         self._running = False

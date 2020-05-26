@@ -260,6 +260,9 @@ class TFClient(object):
         tagger.assign_to_ntf(ipam)
         self.session.network_ipam_create(ipam)
 
+    def list_logical_routers(self):
+        return self.session.logical_routers_list(detail=True)
+
     def read_logical_router(self, uuid=None, fq_name=None):
         """Gets Logical Router with spedified uuid or FQ NAME.
 

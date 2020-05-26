@@ -14,10 +14,12 @@
 #
 
 from neutron_lib import context
+from neutron_lib.plugins import constants as plugin_constants
 from neutron_lib.plugins import directory
 from oslo_log import log as logging
 
 from networking_opencontrail.common import utils
+from networking_opencontrail.l3.service_provider import validate_flavor
 from networking_opencontrail import repository
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import (
@@ -28,13 +30,14 @@ from networking_opencontrail.sync.base import ResourceSynchronizer
 
 
 LOG = logging.getLogger(__name__)
+L3_SERVICE_PROVIDER_NAME = \
+    'networking_opencontrail.l3.service_provider.TFL3ServiceProvider'
 
 
 def list_q_ports():
     core_plugin = directory.get_plugin()
     admin_context = context.get_admin_context()
-    filters = {'device_owner': ['compute:nova']}
-    q_ports = core_plugin.get_ports(admin_context, filters=filters)
+    q_ports = core_plugin.get_ports(admin_context)
     return q_ports
 
 
@@ -43,6 +46,14 @@ def list_q_networks():
     admin_context = context.get_admin_context()
     q_networks = core_plugin.get_networks(admin_context)
     return q_networks
+
+
+def list_q_router_interfaces():
+    core_plugin = directory.get_plugin()
+    admin_context = context.get_admin_context()
+    filters = {'device_owner': ['network:router_interface']}
+    q_ports = core_plugin.get_ports(admin_context, filters=filters)
+    return q_ports
 
 
 class NetworkSynchronizer(OneToOneResourceSynchronizer):
@@ -272,3 +283,64 @@ class SubnetSynchronizer(OneToOneResourceSynchronizer):
 
     def _delete_resource(self, resource_id):
         repository.subnet.delete({"id": resource_id})
+
+
+class RouterSynchronizer(OneToOneResourceSynchronizer):
+    """A Router Synchronizer class.
+
+    Provides methods used to synchronize Logical Routers.
+    """
+    LOG_RES_NAME = "Logical Router"
+
+    def _get_tf_resources(self):
+        return repository.router.list_all()
+
+    def _get_neutron_resources(self):
+        router_plugin = directory.get_plugin(plugin_constants.L3)
+        return router_plugin.get_routers(self._context)
+
+    def _create_resource(self, resource):
+        repository.router.create(resource)
+
+    def _delete_resource(self, resource_id):
+        repository.router.delete(resource_id)
+
+    def _ignore_tf_resource(self, resource):
+        return self._no_ml2_tag(resource)
+
+    def _ignore_neutron_resource(self, resource):
+        return not validate_flavor(
+            L3_SERVICE_PROVIDER_NAME, resource, self._context)
+
+
+class RouterInterfaceSynchronizer(OneToOneResourceSynchronizer):
+    """A Router Interface Synchronizer class.
+
+    Provides methods used to synchronize VMIs for LR Interfaces.
+    """
+    LOG_RES_NAME = "Logical Router Interface"
+
+    def _get_tf_resources(self):
+        return repository.tf_client.list_vmis()
+
+    def _get_neutron_resources(self):
+        return list_q_router_interfaces()
+
+    def _create_resource(self, resource):
+        router_id = resource['device_id']
+        repository.router.add_interface(router_id, resource)
+
+    def _delete_resource(self, resource_id):
+        lr_vmi = repository.tf_client.read_vmi(resource_id)
+        router_id = lr_vmi.get_logical_router_back_refs()[0]['uuid']
+        repository.router.remove_interface(router_id, resource_id)
+
+    def _ignore_tf_resource(self, resource):
+        return (self._no_ml2_tag(resource)
+                or not resource.get_logical_router_back_refs())
+
+    def _ignore_neutron_resource(self, resource):
+        router_plugin = directory.get_plugin(plugin_constants.L3)
+        router = router_plugin.get_router(self._context, resource['device_id'])
+        return not validate_flavor(
+            L3_SERVICE_PROVIDER_NAME, router, self._context)

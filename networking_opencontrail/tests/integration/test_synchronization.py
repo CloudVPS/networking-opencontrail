@@ -20,6 +20,9 @@ from networking_opencontrail.tests.base import FabricTestCase
 
 from vnc_api import vnc_api
 
+from networking_opencontrail.tests.integration.test_logical_routers \
+    import TestLogicalRouterBase
+
 
 def retry_if_none(result):
     return result is None
@@ -407,3 +410,132 @@ class TestSubnetSynchronization(SynchronizationTestCase):
             if subnet.subnet_uuid == subnet_id:
                 return subnet
         return None
+
+
+class TestRouterSynchronization(
+    TestLogicalRouterBase, SynchronizationTestCase):
+    """Following scenarios are tested:
+
+    1. Test if Logical Router is recreated properly:
+        - Create a test router in Neutron.
+        - Corresponding Logical Router should be created in TF.
+        - Delete the LR from TF manually.
+        - Check if the LR was recreated in TF.
+
+    2. Test if stale Logical Router is deleted properly:
+        - Create a test Logical Router in TF.
+        - Since it doesn't correspond to any router in Neutron, it will be
+            considered 'stale' by the Synchronizer.
+        - Check if the LR was deleted in TF.
+    """
+    def test_recreate(self):
+        router = {
+            'name': 'test-router',
+            'admin_state_up': True,
+            'flavor_id': self.test_flavor['id'],
+        }
+
+        q_router = self.q_create_logical_router(router)['router']
+
+        self.tf_delete('logical-router', q_router['id'])
+
+        self.assertIsNotNone(
+            self._get_recreated_resource('logical-router', q_router['id'])
+        )
+
+    def test_redelete(self):
+        router = vnc_api.LogicalRouter(
+            name='test-router', parent_obj=self.tf_project)
+        ml2_tag = self.tf_list(
+            'tag', detail=True, fq_names=[["label=__ML2__"]]
+        )[0]
+        router.add_tag(ml2_tag)
+
+        router_id = self.tf_create(router)
+
+        self.assertIsNone(
+            self._get_redeleted_resource(
+                'logical-router', router_id)
+        )
+
+
+class TestRouterInterfaceSynchronization(
+    TestLogicalRouterBase, SynchronizationTestCase):
+    """Following scenarios are tested:
+
+    1. Test if VMI for LR interface is recreated properly:
+        - Create a network+subnet+router in Neutron.
+        - Add a test interface to the router.
+        - Corresponding VMI should be created in TF.
+        - Delete the VMI from TF manually.
+        - Check if the VMI was recreated in TF.
+
+    2. Test if stale Logical Router is deleted properly:
+        - Create a test LR VMI in TF.
+        - Since it doesn't correspond to any router interface in Neutron,
+         it will be considered 'stale' by the Synchronizer.
+        - Check if the LR VMI was deleted in TF.
+    """
+    def setUp(self):
+        super(TestRouterInterfaceSynchronization, self).setUp()
+
+        network = {
+            'name': 'test-lr-network',
+            'admin_state_up': True,
+            'provider:network_type': 'local',
+        }
+        self.q_network = self.q_create_network(**network)['network']
+
+        subnet = {
+            'name': 'test-subnet',
+            'cidr': '10.10.11.0/24',
+            'network_id': self.q_network['id'],
+            'gateway_ip': '10.10.11.1',
+            'ip_version': 4,
+        }
+        self.q_subnet = self.q_create_subnet(**subnet)['subnet']
+
+        router = {
+            'name': 'test-router',
+            'admin_state_up': True,
+            'flavor_id': self.test_flavor['id'],
+        }
+        self.q_router = self.q_create_logical_router(router)['router']
+
+    def test_recreate(self):
+        response = self.add_router_interface(self.q_router, self.q_subnet)
+
+        router = self.tf_get('logical-router', self.q_router['id'])
+        lr_vmi = self.tf_get('virtual-machine-interface', response['port_id'])
+        router.del_virtual_machine_interface(lr_vmi)
+        self.tf_update(router)
+
+        self.tf_delete('virtual-machine-interface', response['port_id'])
+
+        self.assertIsNotNone(
+            self._get_recreated_resource(
+                'virtual-machine-interface', response['port_id'])
+        )
+
+        self.remove_router_interface(self.q_router, self.q_subnet)
+
+    def test_redelete(self):
+        tf_router = self.tf_get('logical-router', self.q_router['id'])
+        tf_network = self.tf_get('virtual-network', self.q_network['id'])
+        port_id = 'ab941370-b10d-46b4-945b-04fc33d90255'
+        ml2_tag = self.tf_list(
+            'tag', detail=True, fq_names=[["label=__ML2__"]]
+        )[0]
+
+        lr_vmi = resources.lr_vmi.create(
+            port_id, self.tf_project, tf_network, tf_router.name)
+        lr_vmi.add_tag(ml2_tag)
+
+        self.tf_create(lr_vmi)
+
+        tf_router.set_virtual_machine_interface(lr_vmi)
+        self.tf_update(tf_router)
+
+        self.assertIsNone(
+            self._get_redeleted_resource('virtual-machine-interface', port_id)
+        )
