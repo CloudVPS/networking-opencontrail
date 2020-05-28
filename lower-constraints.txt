@@ -61,7 +61,6 @@ msgpack-python==0.5.6
 munch==2.2.0
 netaddr==0.7.19
 netifaces==0.10.6
--e git+ssh://wiktor.sleczka@review.opendev.org:29418/x/networking-opencontrail@f2f592098e6c43b7e571f596f58252b457f70398#egg=networking_opencontrail
 -e git+https://git.openstack.org/openstack/neutron.git@3559d8bcc7ddae553dac59505596abbc020922c7#egg=neutron
 neutron-lib==1.13.0
 openstackdocstheme==1.22.0
@@ -98,7 +97,6 @@ pecan==1.2.1
 pep8==1.5.7
 pika==0.10.0
 pika-pool==0.1.3
-pkg-resources==0.0.0
 prettytable==0.7.2
 psutil==5.4.3
 pycadf==2.7.0
