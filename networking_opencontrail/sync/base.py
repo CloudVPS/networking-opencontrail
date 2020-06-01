@@ -17,9 +17,11 @@ import abc
 
 from neutron_lib import context
 from neutron_lib.plugins import directory
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import six
 
+from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
 
 LOG = logging.getLogger(__name__)
 
@@ -60,6 +62,7 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
         self.to_create = []
         self.to_delete = []
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
     def synchronize(self):
         """Synchronize resources.
 

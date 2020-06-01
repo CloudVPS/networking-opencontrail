@@ -19,3 +19,7 @@ VNC_API_DEFAULT_PORT = 8082
 VNC_API_DEFAULT_BASE_URL = '/'
 VNC_API_DEFAULT_USE_SSL = False
 VNC_API_DEFAULT_INSECURE = False
+
+# NTF sync lock - this lock prevents synchronization and callbacks from running
+# simultaneously
+NTF_SYNC_LOCK_NAME = 'ntf_sync_lock'

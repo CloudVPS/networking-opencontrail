@@ -20,9 +20,11 @@ from neutron_lib.callbacks import resources
 from neutron_lib import constants as q_const
 from neutron_lib.plugins import constants as plugin_constants
 from neutron_lib.plugins import directory
+from oslo_concurrency import lockutils
 from oslo_log import helpers as log_helpers
 from oslo_log import log as logging
 
+from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
 from networking_opencontrail import repository
 
 LOG = logging.getLogger(__name__)
@@ -70,6 +72,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.ROUTER, [events.BEFORE_CREATE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_create(self, resource, event, trigger, **kwargs):
         """Creates Logical Router in TF Database."""
         router = kwargs['router']
@@ -81,6 +84,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.ROUTER, [events.ABORT_CREATE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_abort_create(self, resource, event, trigger, **kwargs):
         """Deletes LR from TF DB when creation is aborted."""
         router = kwargs['router']
@@ -92,6 +96,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.ROUTER, [events.BEFORE_DELETE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_delete(self, resource, event, trigger, **kwargs):
         """Deletes Logical Router from TF Database."""
         router_id = kwargs['router_id']
@@ -103,6 +108,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.ROUTER, [events.ABORT_DELETE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_abort_delete(self, resource, event, trigger, **kwargs):
         """Recreates LR in TF DB when deleting is aborted."""
         router_id = kwargs['router_id']
@@ -115,6 +121,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.ROUTER_INTERFACE, [events.BEFORE_CREATE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_add_interface(self, resource, event, trigger, **kwargs):
         """Creates VMI in TF for a LR interface and attaches it to LR."""
         context = kwargs['context']
@@ -127,6 +134,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.ROUTER_INTERFACE, [events.ABORT_CREATE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_abort_add_interface(self, resource, event, trigger, **kwargs):
         """Deletes LR VMI from TF DB when adding interface is aborted."""
         context = kwargs['context']
@@ -139,6 +147,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.PORT, [events.BEFORE_DELETE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_remove_interface(self, resource, event, trigger, **kwargs):
         """Deletes the LR VMI from TF.
 
@@ -160,6 +169,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
 
     @registry.receives(resources.PORT, [events.ABORT_DELETE])
     @log_helpers.log_method_call
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def router_abort_remove_interface(
             self, resource, event, trigger, **kwargs):
         """Recreates the LR VMI in TF when removing interface is aborted.

@@ -45,6 +45,7 @@ def create(q_subnet):
             LOG.warning('Network %s has more than 1 Network IPAM. \
                 Subnet will be attached to the first one.', network.name)
         vn_subnets = ipam_refs[0]['attr']
+        vn_subnets = _delete_existing_subnet(vn_subnets, subnet)
         vn_subnets.ipam_subnets.append(subnet)
         network._pending_field_updates.add('network_ipam_refs')
 
@@ -66,6 +67,14 @@ def delete(q_subnet):
         networks = tf_client.list_networks()
         for network in networks:
             _delete_from_network(network, q_subnet)
+
+
+def _delete_existing_subnet(vn_subnets, subnet):
+    vn_subnets.ipam_subnets = [
+        sub for sub in vn_subnets.ipam_subnets
+        if sub.get_subnet_uuid() != subnet.get_subnet_uuid()
+    ]
+    return vn_subnets
 
 
 def _delete_from_network(network, q_subnet):

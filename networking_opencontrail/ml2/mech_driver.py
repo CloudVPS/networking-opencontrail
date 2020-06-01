@@ -12,12 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
 
-import networking_opencontrail.drivers.drv_opencontrail as drv
 from neutron_lib.plugins.ml2 import api
 
+from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
 from networking_opencontrail.common import utils
+from networking_opencontrail.drivers import drv_opencontrail as drv
 from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail import repository
 from networking_opencontrail.sync import worker
@@ -55,16 +57,19 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def create_network_postcommit(self, context):
         """Create a network in OpenContrail."""
         q_network = context.current
         repository.network.create(q_network=q_network)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_network_postcommit(self, context):
         """Delete a network from OpenContrail."""
         q_network = context.current
         repository.network.delete(q_network=q_network)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def update_network_postcommit(self, context):
         """Update an existing network in OpenContrail."""
         q_network = context.current
@@ -72,21 +77,25 @@ class OpenContrailMechDriver(api.MechanismDriver):
         repository.network.update(old_q_network=old_q_network,
                                   q_network=q_network)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def create_subnet_postcommit(self, context):
         """Create a subnet in OpenContrail."""
         subnet = context.current
         repository.subnet.create(subnet)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_subnet_postcommit(self, context):
         """Delete a subnet from OpenContrail."""
         subnet = context.current
         repository.subnet.delete(subnet)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def update_subnet_postcommit(self, context):
         """Update a subnet in OpenContrail."""
         subnet = context.current
         repository.subnet.update(subnet)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def create_port_postcommit(self, context):
         """Create a port in OpenContrail."""
         q_port = context.current
@@ -95,6 +104,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         repository.vpg.create(q_port, q_network)
         repository.vmi.create(q_port, q_network)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def update_port_postcommit(self, context):
         """Update a port in OpenContrail."""
         q_port = context.current
@@ -107,6 +117,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         repository.vpg.create(q_port, q_network)
         repository.vmi.create(q_port, q_network)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_port_postcommit(self, context):
         """Delete a port from OpenContrail."""
         q_port = context.current
@@ -115,6 +126,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         repository.vmi.delete(q_port, q_network, context._plugin_context)
         repository.vpg.delete(q_port, q_network)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def create_security_group(self, context, sg):
         """Create a Security Group in OpenContrail."""
         # vnc_openstack does not allow to create default security group
@@ -127,6 +139,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         except Exception:
             LOG.exception('Failed to create Security Group %s' % sg)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_security_group(self, context, sg):
         """Delete a Security Group from OpenContrail."""
         sg_id = sg.get('id')
@@ -135,6 +148,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         except Exception:
             LOG.exception('Failed to delete Security Group %s' % sg_id)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def update_security_group(self, context, sg_id, sg):
         """Update a Security Group in OpenContrail."""
         sec_g = {'security_group': sg}
@@ -143,6 +157,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         except Exception:
             LOG.exception('Failed to update Security Group %s' % sg_id)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def create_security_group_rule(self, context, sgr):
         """Create a Security Group Rule in OpenContrail."""
         sgr_r = {'security_group_rule': sgr}
@@ -151,6 +166,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
         except Exception:
             LOG.exception('Failed to create Security Group rule %s' % sgr)
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_security_group_rule(self, context, sgr_id):
         """Delete a Security Group Rule from OpenContrail."""
         try:

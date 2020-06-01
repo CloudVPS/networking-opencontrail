@@ -16,8 +16,10 @@
 from neutron_lib import context
 from neutron_lib.plugins import constants as plugin_constants
 from neutron_lib.plugins import directory
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
 
+from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
 from networking_opencontrail.common import utils
 from networking_opencontrail.l3.service_provider import validate_flavor
 from networking_opencontrail import repository
@@ -233,6 +235,7 @@ class VPGAndVMISynchronizer(ResourceSynchronizer):
         self.vpg_synchronizer = VPGSynchronizer()
         self.vmi_synchronizer = VMISynchronizer()
 
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
     def synchronize(self):
         vmi_names_to_create, vmi_names_to_delete = \
             self.vmi_synchronizer.calculate_diff()
