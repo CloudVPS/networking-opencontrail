@@ -31,8 +31,9 @@ class TestManageNetwork(IntegrationTestCase):
 
         network = self.tf_get('virtual-network', q_network['id'])
 
-        self.assertEqual(network.name, q_network['name'])
         self.assertEqual(network.get_uuid(), q_network['id'])
+        self.assertEqual(network.name, q_network['id'])
+        self.assertEqual(network.display_name, q_network['name'])
 
     def test_update_network_vlan(self):
         network_schema = {
@@ -51,7 +52,7 @@ class TestManageNetwork(IntegrationTestCase):
         network = self.tf_get('virtual-network',
                               wrapped_q_network['network']['id'])
         self.assertEqual(network.get_display_name(), new_name)
-        self.assertEqual(network.name, network_schema['name'])
+        self.assertEqual(network.name, wrapped_q_network['network']['id'])
 
     def test_delete_network_vlan(self):
         network_schema = {

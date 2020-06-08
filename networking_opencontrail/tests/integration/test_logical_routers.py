@@ -73,8 +73,9 @@ class TestLogicalRouterBase(FabricTestCase):
     def assert_tf_router(self, router_id, expected):
         tf_router = self.tf_get('logical-router', router_id)
         tf_dict = {
-            'name': tf_router.name,
             'uuid': tf_router.get_uuid(),
+            'name': tf_router.name,
+            'display_name': tf_router.display_name,
             'project_id': tf_router.parent_uuid,
             'lr_type': tf_router.get_logical_router_type(),
         }
@@ -136,8 +137,9 @@ class TestLogicalRouterCRB(TestLogicalRouterBase):
         q_router = self.q_create_logical_router(router)['router']
 
         expected = {
-            'name': q_router.get('name'),
             'uuid': q_router.get('id'),
+            'name': q_router.get('id'),
+            'display_name': q_router.get('name'),
             'project_id': str(uuid.UUID(q_router.get('project_id'))),
             'lr_type': 'vxlan-routing',
             'physical_routers': ['qfx-spine-1', 'qfx-spine-2'],
@@ -186,8 +188,9 @@ class TestLogicalRouterERB(TestLogicalRouterBase):
         q_router = self.q_create_logical_router(router)['router']
 
         expected = {
-            'name': q_router.get('name'),
             'uuid': q_router.get('id'),
+            'name': q_router.get('id'),
+            'display_name': q_router.get('name'),
             'project_id': str(uuid.UUID(q_router.get('project_id'))),
             'lr_type': 'vxlan-routing',
             'physical_routers': sorted(['qfx-leaf-1', 'qfx-leaf-2']),

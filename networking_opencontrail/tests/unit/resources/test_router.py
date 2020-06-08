@@ -32,5 +32,6 @@ class RouterResourceTestCase(base.TestCase):
         router = create(q_router, project)
 
         self.assertEqual(router.uuid, q_router['id'])
-        self.assertEqual(router.name, q_router['name'])
+        self.assertEqual(router.name, q_router['id'])
+        self.assertEqual(router.display_name, q_router['name'])
         self.assertEqual(router.logical_router_type, 'vxlan-routing')
