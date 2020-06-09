@@ -44,10 +44,11 @@ def delete(router_id):
     router = tf_client.read_logical_router(router_id)
 
     if router is None:
+        LOG.info("Logical Router %s does not exist", router_id)
         return
 
-    if not tagger.belongs_to_ntf(router_id):
-        LOG.info("%s was not created by NTF - skipping", router_id.name)
+    if not tagger.belongs_to_ntf(router):
+        LOG.info("%s was not created by NTF - skipping", router.name)
         return
 
     tf_client.delete_logical_router(uuid=router_id)

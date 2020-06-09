@@ -41,12 +41,9 @@ def create(q_network):
 
 @reconnect
 def update(old_q_network, q_network):
-    project = request_project(old_q_network)
-    network = resources.network.create(
-        q_network=old_q_network, project=project)
-
-    if not tagger.belongs_to_ntf(old_q_network):
-        LOG.info("%s was not created by NTF - skipping", old_q_network.name)
+    network = tf_client.read_network(old_q_network['id'])
+    if not tagger.belongs_to_ntf(network):
+        LOG.info("%s was not created by NTF - skipping", network.name)
         return
 
     network.display_name = q_network['name']
@@ -57,6 +54,10 @@ def update(old_q_network, q_network):
 @reconnect
 def delete(q_network):
     network = tf_client.read_network(q_network['id'])
+
+    if network is None:
+        LOG.info("Virtual Network %s does not exist", q_network['id'])
+        return
 
     if not tagger.belongs_to_ntf(network):
         LOG.info("%s was not created by NTF - skipping", network.name)
