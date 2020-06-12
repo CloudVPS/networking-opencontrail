@@ -217,15 +217,10 @@ class IntegrationTestCase(base.BaseTestCase):
         network_body['network'].update(kwargs)
         return self.q_update_resource(q_network['network'], network_body)
 
-    def q_create_subnet(self, name, network_id, ip_version, cidr, **kwargs):
-        subnet = {}
-        subnet.update(kwargs)
-        subnet['name'] = name
-        subnet['network_id'] = network_id
-        subnet['ip_version'] = ip_version
-        subnet['cidr'] = cidr
-        subnet_body = {}
-        subnet_body['subnet'] = subnet
+    def q_create_subnet(self, **q_subnet):
+        subnet_body = {
+            'subnet': q_subnet
+        }
         return self.q_create_resource(subnet_body)
 
     def q_update_subnet(self, subnet, **kwargs):

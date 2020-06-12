@@ -14,6 +14,8 @@
 # under the License.
 import uuid
 
+from networking_opencontrail.resources.subnet import get_dhcp_option_list
+from networking_opencontrail.resources.subnet import get_host_routes
 from networking_opencontrail.tests.base import IntegrationTestCase
 
 
@@ -29,21 +31,41 @@ class TestSubnets(IntegrationTestCase):
         self.test_network = self.q_create_network(**net)
 
     def test_create_subnet(self):
+        """Create subnet with properties."""
         subnet = {
             'name': 'test_subnet',
             'cidr': '10.10.11.0/24',
             'network_id': self.test_network['network']['id'],
             'gateway_ip': '10.10.11.1',
             'ip_version': 4,
+            'allocation_pools': [
+                {
+                    'start': '10.10.11.33',
+                    'end': '10.10.11.55'
+                }
+            ],
+            'dns_nameservers': ['10.10.11.22', '10.10.11.23'],
+            'host_routes': [
+                {
+                    'nexthop': '10.10.11.1',
+                    'destination': '1.1.1.0/24'
+                }
+            ]
         }
         q_subnet = self.q_create_subnet(**subnet)
-
+        alloc_pool_start = q_subnet['subnet']['allocation_pools'][0]['start']
+        alloc_pools_end = q_subnet['subnet']['allocation_pools'][0]['end']
+        dns_nameservers = q_subnet['subnet']['dns_nameservers']
         expected = {
             'name': q_subnet['subnet']['name'],
             'network_id': q_subnet['subnet']['network_id'],
             'cidr': q_subnet['subnet']['cidr'],
             'gateway_ip': q_subnet['subnet']['gateway_ip'],
             'id': q_subnet['subnet']['id'],
+            'allocation_pools_start': alloc_pool_start,
+            'allocation_pools_end': alloc_pools_end,
+            'dhcp_option_list': get_dhcp_option_list(dns_nameservers),
+            'host_routes': get_host_routes(q_subnet['subnet']['host_routes'])
         }
 
         sub = self._get_subnet_from_network(q_subnet['subnet']['id'],
@@ -62,17 +84,35 @@ class TestSubnets(IntegrationTestCase):
                               str(sub_ip.get_ip_prefix_len() or '')]),
             'gateway_ip': sub.get_default_gateway(),
             'id': sub.get_subnet_uuid(),
+            'allocation_pools_start': sub.get_allocation_pools()[0].start,
+            'allocation_pools_end': sub.get_allocation_pools()[0].end,
+            'dhcp_option_list': sub.get_dhcp_option_list(),
+            'host_routes': sub.get_host_routes()
         }
 
         self.assertDictEqual(expected, contrail_dict)
 
     def test_add_second_subnet(self):
+        """Create second subnet with properties."""
         subnet_1 = {
             'name': 'test_subnet_1',
             'cidr': '10.10.11.0/24',
             'network_id': self.test_network['network']['id'],
             'gateway_ip': '10.10.11.1',
             'ip_version': 4,
+            'allocation_pools': [
+                {
+                    'start': '10.10.11.33',
+                    'end': '10.10.11.55'
+                }
+            ],
+            'dns_nameservers': ['10.10.11.22', '10.10.11.23'],
+            'host_routes': [
+                {
+                    'nexthop': '10.10.11.1',
+                    'destination': '1.1.1.0/24'
+                }
+            ]
         }
         q_subnet_1 = self.q_create_subnet(**subnet_1)
 
@@ -82,22 +122,48 @@ class TestSubnets(IntegrationTestCase):
             'network_id': self.test_network['network']['id'],
             'gateway_ip': '20.20.22.1',
             'ip_version': 4,
+            'allocation_pools': [
+                {
+                    'start': '20.20.22.88',
+                    'end': '20.20.22.108'
+                }
+            ],
+            'dns_nameservers': ['20.20.22.15', '20.20.22.19'],
+            'host_routes': [
+                {
+                    'nexthop': '20.20.22.1',
+                    'destination': '1.2.3.0/24'
+                }
+            ]
         }
         q_subnet_2 = self.q_create_subnet(**subnet_2)
-
+        alloc_pool_start = q_subnet_1['subnet']['allocation_pools'][0]['start']
+        alloc_pool_end = q_subnet_1['subnet']['allocation_pools'][0]['end']
+        dns_nameservers = q_subnet_1['subnet']['dns_nameservers']
         expected_1 = {
             'name': q_subnet_1['subnet']['name'],
             'network_id': q_subnet_1['subnet']['network_id'],
             'cidr': q_subnet_1['subnet']['cidr'],
             'gateway_ip': q_subnet_1['subnet']['gateway_ip'],
             'id': q_subnet_1['subnet']['id'],
+            'allocation_pools_start': alloc_pool_start,
+            'allocation_pools_end': alloc_pool_end,
+            'dhcp_option_list': get_dhcp_option_list(dns_nameservers),
+            'host_routes': get_host_routes(q_subnet_1['subnet']['host_routes'])
         }
+        alloc_pool_start = q_subnet_2['subnet']['allocation_pools'][0]['start']
+        alloc_pools_end = q_subnet_2['subnet']['allocation_pools'][0]['end']
+        dns_nameservers = q_subnet_2['subnet']['dns_nameservers']
         expected_2 = {
             'name': q_subnet_2['subnet']['name'],
             'network_id': q_subnet_2['subnet']['network_id'],
             'cidr': q_subnet_2['subnet']['cidr'],
             'gateway_ip': q_subnet_2['subnet']['gateway_ip'],
             'id': q_subnet_2['subnet']['id'],
+            'allocation_pools_start': alloc_pool_start,
+            'allocation_pools_end': alloc_pools_end,
+            'dhcp_option_list': get_dhcp_option_list(dns_nameservers),
+            'host_routes': get_host_routes(q_subnet_2['subnet']['host_routes'])
         }
         sub_1 = self._get_subnet_from_network(
             q_subnet_1['subnet']['id'],
@@ -124,6 +190,10 @@ class TestSubnets(IntegrationTestCase):
                                   str(sub_ip.get_ip_prefix_len() or '')]),
                 'gateway_ip': sub.get_default_gateway(),
                 'id': sub.get_subnet_uuid(),
+                'allocation_pools_start': sub.get_allocation_pools()[0].start,
+                'allocation_pools_end': sub.get_allocation_pools()[0].end,
+                'dhcp_option_list': sub.get_dhcp_option_list(),
+                'host_routes': sub.get_host_routes()
             }
 
             self.assertDictEqual(expected, contrail_dict)
@@ -146,10 +216,17 @@ class TestSubnets(IntegrationTestCase):
             'ip_version': 4,
             'allocation_pools': [
                 {
-                    'start': '10.10.11.3',
-                    'end': '10.10.11.254'
+                    'start': '10.10.11.33',
+                    'end': '10.10.11.55'
                 }
             ],
+            'dns_nameservers': ['10.10.11.22', '10.10.11.23'],
+            'host_routes': [
+                {
+                    'nexthop': '10.10.11.1',
+                    'destination': '1.1.1.0/24'
+                }
+            ]
         }
         q_subnet = self.q_create_subnet(**subnet)
 
@@ -160,15 +237,34 @@ class TestSubnets(IntegrationTestCase):
         changed_fields = {
             'name': 'new_subnet_name',
             'gateway_ip': '10.10.11.2',
+            'allocation_pools': [
+                {
+                    'start': '10.10.11.36',
+                    'end': '10.10.11.55'
+                }
+            ],
+            'dns_nameservers': ['10.10.11.22', '10.10.11.25'],
+            'host_routes': [
+                {
+                    'nexthop': '10.10.11.1',
+                    'destination': '1.1.2.0/24'
+                }
+            ]
         }
         q_subnet = self.q_update_subnet(q_subnet, **changed_fields)
-
+        alloc_pool_start = q_subnet['subnet']['allocation_pools'][0]['start']
+        alloc_pools_end = q_subnet['subnet']['allocation_pools'][0]['end']
+        dns_nameservers = q_subnet['subnet']['dns_nameservers']
         expected = {
             'name': q_subnet['subnet']['name'],
             'network_id': q_subnet['subnet']['network_id'],
             'cidr': q_subnet['subnet']['cidr'],
             'gateway_ip': q_subnet['subnet']['gateway_ip'],
             'id': q_subnet['subnet']['id'],
+            'allocation_pools_start': alloc_pool_start,
+            'allocation_pools_end': alloc_pools_end,
+            'dhcp_option_list': get_dhcp_option_list(dns_nameservers),
+            'host_routes': get_host_routes(q_subnet['subnet']['host_routes'])
         }
 
         sub = self._get_subnet_from_network(q_subnet['subnet']['id'],
@@ -185,17 +281,35 @@ class TestSubnets(IntegrationTestCase):
                               str(sub_ip.get_ip_prefix_len() or '')]),
             'gateway_ip': sub.get_default_gateway(),
             'id': sub.get_subnet_uuid(),
+            'allocation_pools_start': sub.get_allocation_pools()[0].start,
+            'allocation_pools_end': sub.get_allocation_pools()[0].end,
+            'dhcp_option_list': sub.get_dhcp_option_list(),
+            'host_routes': sub.get_host_routes()
         }
 
         self.assertDictEqual(expected, s)
 
     def test_delete_subnet(self):
+        """Delete subnet with properties."""
         subnet = {
             'name': 'test_subnet',
             'cidr': '10.10.11.0/24',
             'network_id': self.test_network['network']['id'],
             'gateway_ip': '10.10.11.1',
-            'ip_version': 4
+            'ip_version': 4,
+            'allocation_pools': [
+                {
+                    'start': '10.10.11.33',
+                    'end': '10.10.11.55'
+                }
+            ],
+            'dns_nameservers': ['10.10.11.22', '10.10.11.23'],
+            'host_routes': [
+                {
+                    'nexthop': '10.10.11.1',
+                    'destination': '1.1.1.0/24'
+                }
+            ]
         }
 
         q_subnet = self.q_create_subnet(**subnet)
