@@ -4,6 +4,7 @@
 - include_tasks: provision-instance.yml
 - include_tasks: install-contrail.yml
 
+# TODO: Download docker logs for any restarting container in case if it fails.
 - name: Wait for Contrail API to come up
   uri:
     url: "http://{{ hostvars['controller'].ansible_default_ipv4.address }}:8082/projects"
@@ -32,7 +33,7 @@
   pip:
     name:
       - git+https://github.com/Juniper/contrail-controller.git#subdirectory=src/vnsw/contrail-vrouter-api/
-      - git+https://github.com/Juniper/contrail-nova-vif-driver.git
+      - git+https://github.com/tungstenfabric/tf-nova-vif-driver.git
   retries: 3
   delay: 3
   register: result

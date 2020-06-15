@@ -31,11 +31,18 @@
     state: present
     extra_args: --ignore-installed
 
+- name: Download Ansible 2.4.2.0 release
+  become: yes
+  get_url:
+    url: https://cbs.centos.org/kojifiles/packages/ansible/2.4.2.0/0.el7/noarch/ansible-2.4.2.0-0.el7.noarch.rpm
+    dest: ./ansible-2.4.2.0.rpm
+    mode: 750
+
 - name: Install Ansible
   # Must be installed after PyYAML
   become: yes
   yum:
-    name: ansible-2.4.2.0
+    name: ./ansible-2.4.2.0.rpm
     state: present
     allow_downgrade: yes
 

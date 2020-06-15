@@ -22,14 +22,16 @@
       - openstack-cover-jobs-neutron
     check:
       jobs:
-        - noc-integration:
-            voting: false
+        - noc-integration
         - noc-tempest:
             voting: false
         - noc-tempest-neutron-plugin:
             voting: false
         - requirements-check:
             voting: false
+    gate:
+      jobs:
+        - noc-integration
     periodic:
       jobs:
         - noc-integration:
@@ -146,6 +148,8 @@
               router_scheduler_driver: neutron.scheduler.l3_agent_scheduler.LeastRoutersScheduler
               router_auto_schedule: true
               enable_snat_by_default: false
+            service_providers:
+              service_provider: L3_ROUTER_NAT:TF:networking_opencontrail.l3.service_provider.TFL3ServiceProvider
             quotas:
               # A negative value means unlimited. (integer value)
               quota_network: -1

@@ -62,12 +62,14 @@
     dest: /tmp
   with_items:
     - 'cfgm_common-0.1.dev0.tar.gz'
+    # TODO: Change version
     - 'vnc_api-5.0.0.tar.gz'
 
 - name: install dependencies
   pip:
     name:
       - '/tmp/cfgm_common-0.1.dev0.tar.gz'
+      # TODO: Change version
       - '/tmp/vnc_api-5.0.0.tar.gz'
       - 'git+git://github.com/Juniper/contrail-neutron-plugin.git#egg=neutron_plugin_contrail'
   become: yes

@@ -12,13 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest2 as unittest
+from vnc_api import vnc_api
 
 from networking_opencontrail.repository.utils.irb import \
     select_physical_routers_for_irb
 from networking_opencontrail.tests import base
-
-from vnc_api import vnc_api
 
 
 class FindPRForIRBTestCase(base.TestCase):
@@ -27,12 +25,6 @@ class FindPRForIRBTestCase(base.TestCase):
     1. Selecting all spine switches for CRB case
     2. Selecting all leaf switches for ERB case
     3. Exclude from consideration switches without assigned roles
-
-    Below tests are marked with skipUnless clause because of
-    OverlayRole and PhysicalRole usage, which were introduced
-    after contrail-api-client==5.1 release (only one available in pypi.org).
-    As soon as newest contrail-api-client version be published into pypi.org
-    these skip clauses will be removed.
     """
     def setUp(self):
         super(FindPRForIRBTestCase, self).setUp()
@@ -51,10 +43,6 @@ class FindPRForIRBTestCase(base.TestCase):
             physical_router.add_overlay_role(overlay_role)
         return physical_router
 
-    @unittest.skipUnless(
-        hasattr(vnc_api, "PhysicalRole"),
-        "Skipping if contrail==5.1.0 is installed"
-    )
     def test_select_physical_routers_crb(self):
         spine_1 = self.create_physical_router(
             name="qfx-spine-1",
@@ -86,10 +74,6 @@ class FindPRForIRBTestCase(base.TestCase):
 
         self.assertEqual(result, expected)
 
-    @unittest.skipUnless(
-        hasattr(vnc_api, "PhysicalRole"),
-        "Skipping if contrail==5.1.0 is installed"
-    )
     def test_select_physical_routers_erb(self):
         spine_1 = self.create_physical_router(
             name="qfx-spine",
@@ -115,10 +99,6 @@ class FindPRForIRBTestCase(base.TestCase):
 
         self.assertEqual(result, expected)
 
-    @unittest.skipUnless(
-        hasattr(vnc_api, "PhysicalRole"),
-        "Skipping if contrail==5.1.0 is installed"
-    )
     def test_select_physical_routers_exclude_invalid(self):
         spine_1 = self.create_physical_router(
             name="qfx-spine-1",

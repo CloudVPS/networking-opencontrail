@@ -8,7 +8,7 @@ neutron-lib>=1.13.0 # Apache-2.0
 retrying>=1.3.3 # Apache-2.0
 PyYAML>=3.12
 jsonschema>=2.6.0
-contrail-api-client>=5.1.0
+contrail-api-client>=2005
 
 # These repos are installed from git in OpenStack CI if the job
 # configures them as required-projects:

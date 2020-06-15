@@ -58,23 +58,64 @@ class IntegrationTestCase(base.BaseTestCase):
     def setUp(self):
         super(IntegrationTestCase, self).setUp()
 
-        auth = identity.V3Password(
+        keystoneAuth = identity.V3Password(
             auth_url=self.auth_url,
             username=self.keystone_user,
             password=self.keystone_password,
             project_name=self.keystone_project,
             project_domain_id=self.keystone_project_domain_id,
             user_domain_id=self.keystone_user_domain_id)
-        sess = session.Session(auth=auth)
+        keystoneSess = session.Session(auth=keystoneAuth)
 
-        self.neutron = neutron.Client(session=sess)
-        self.keystone = keystone.Client(session=sess)
+        self.keystone = keystone.Client(session=keystoneSess)
 
         # Create keystone project and make TF synchronize it
         self.project = self._create_keystone_project_for_test()
+        self._add_admin_role_to_project()
+
+        neutronAuth = identity.V3Password(
+            auth_url=self.auth_url,
+            username=self.keystone_user,
+            password=self.keystone_password,
+            project_name=self.project.name,
+            project_domain_id=self.keystone_project_domain_id,
+            user_domain_id=self.keystone_user_domain_id)
+        neutronSess = session.Session(auth=neutronAuth)
+
+        self.neutron = neutron.Client(session=neutronSess)
+
         self.tf_project = self.tf_get('project', self.project.id)
 
         self.neutronCleanupQueue = []
+
+    def _add_admin_role_to_project(self):
+        role_uuid = self._get_admin_role_uuid()
+        if role_uuid is None:
+            raise ValueError("Cannot find Openstack Admin Role")
+        user_uuid = self._get_admin_user_uuid()
+        if user_uuid is None:
+            raise ValueError("Cannot find Openstack '{}' User".format(
+                self.keystone_user
+            ))
+        self.keystone.roles.grant(
+            role=role_uuid,
+            user=user_uuid,
+            project=self.project.id
+        )
+
+    def _get_admin_role_uuid(self):
+        roles = self.keystone.roles.list()
+        for r in roles:
+            if r.name == 'admin':
+                return r.id
+        return None
+
+    def _get_admin_user_uuid(self):
+        users = self.keystone.users.list()
+        for u in users:
+            if u.name == self.keystone_user:
+                return u.id
+        return None
 
     def tearDown(self):
         super(IntegrationTestCase, self).tearDown()

@@ -11,7 +11,7 @@ chardet==3.0.4
 cliff==2.11.1
 cmd2==0.7.9
 contextlib2==0.5.5
-contrail-api-client==5.1.0
+contrail-api-client==2005
 coverage==4.4.2
 ddt==1.1.1
 debtcollector==1.19.0
@@ -103,7 +103,6 @@ pycadf==2.7.0
 pycparser==2.18
 pyflakes==0.8.1
 Pygments==2.2.0
-pyinotify==0.9.6
 pyparsing==2.2.0
 pyperclip==1.6.0
 pyroute2==0.4.21

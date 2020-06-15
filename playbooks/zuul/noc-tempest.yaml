@@ -1,3 +1,17 @@
+- hosts: all
+  tasks:
+    # This ansible is a workaround for devstack error with installing
+    # uwsgi on CentOS with stable/queens or stable/train branch.
+    # This should be removed as soon as the change
+    # https://review.opendev.org/#/c/736189/ is merged or any other
+    # fix is applied to openstack/devstack.
+    - name: Update Apache file from devstack repository
+      become: yes
+      copy:
+        remote_src: yes
+        src: /home/zuul/src/opendev.org/x/networking-opencontrail/fixed_apache_script
+        dest: /opt/stack/devstack/lib/apache
+
 # Changes that run through devstack-tempest are likely to have an impact on
 # the devstack part of the job, so we keep devstack in the main play to
 # avoid zuul retrying on legitimate failures.

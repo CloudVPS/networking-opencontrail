@@ -32,22 +32,26 @@ def retry_if_not_none(result):
     return result is not None
 
 
+RETRY_DEADLINE = 30000
+RETRY_PAUSE = 1000
+
+
 class SynchronizationTestCase(FabricTestCase):
     def setUp(self):
         super(SynchronizationTestCase, self).setUp()
 
     @retry(
         retry_on_result=retry_if_none,
-        wait_fixed=1000,
-        stop_max_delay=10000
+        wait_fixed=RETRY_PAUSE,
+        stop_max_delay=RETRY_DEADLINE
     )
     def _get_recreated_resource(self, res_type, res_id):
         return self.tf_get(res_type, res_id)
 
     @retry(
         retry_on_result=retry_if_not_none,
-        wait_fixed=1000,
-        stop_max_delay=10000,
+        wait_fixed=RETRY_PAUSE,
+        stop_max_delay=RETRY_DEADLINE,
     )
     def _get_redeleted_resource(self, res_type, res_id):
         return self.tf_get(res_type, res_id)
@@ -384,8 +388,8 @@ class TestSubnetSynchronization(SynchronizationTestCase):
 
     @retry(
         retry_on_result=retry_if_none,
-        wait_fixed=1000,
-        stop_max_delay=10000
+        wait_fixed=RETRY_PAUSE,
+        stop_max_delay=RETRY_DEADLINE
     )
     def _get_recreated_resource(self, subnet_id, network_id):
         network = self.tf_get("virtual-network", network_id)
@@ -398,8 +402,8 @@ class TestSubnetSynchronization(SynchronizationTestCase):
 
     @retry(
         retry_on_result=retry_if_not_none,
-        wait_fixed=1000,
-        stop_max_delay=10000,
+        wait_fixed=RETRY_PAUSE,
+        stop_max_delay=RETRY_DEADLINE,
     )
     def _get_redeleted_resource(self, subnet_id, network_id):
         network = self.tf_get("virtual-network", network_id)
@@ -427,6 +431,7 @@ class TestRouterSynchronization(
             considered 'stale' by the Synchronizer.
         - Check if the LR was deleted in TF.
     """
+
     def test_recreate(self):
         router = {
             'name': 'test-router',
