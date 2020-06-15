@@ -36,7 +36,7 @@ def validate_flavor(provider_name, router, context):
     exist in Neutron's DB, but that's not always the case (while handling
     BEFORE_CREATE event, for example).
     """
-    flavor_id = router['flavor_id']
+    flavor_id = router['flavor_id'] or q_const.ATTR_NOT_SPECIFIED
     if flavor_id is q_const.ATTR_NOT_SPECIFIED:
         return False
 
@@ -118,24 +118,24 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
     def router_add_interface(self, resource, event, trigger, **kwargs):
         """Creates VMI in TF for a LR interface and attaches it to LR."""
         context = kwargs['context']
-        router = kwargs['router_db']
+        router_id = kwargs['router_db']['id']
         port = kwargs['port']
-        if not self.owns_router(context, router['id']):
-            LOG.debug('Skipping router not managed by TF (%s)', router['id'])
+        if not self.owns_router(context, router_id):
+            LOG.debug('Skipping router not managed by TF (%s)', router_id)
             return
-        repository.router.add_interface(router, port)
+        repository.router.add_interface(router_id, port)
 
     @registry.receives(resources.ROUTER_INTERFACE, [events.ABORT_CREATE])
     @log_helpers.log_method_call
     def router_abort_add_interface(self, resource, event, trigger, **kwargs):
         """Deletes LR VMI from TF DB when adding interface is aborted."""
         context = kwargs['context']
-        router = kwargs['router_db']
-        port = kwargs['port']
-        if not self.owns_router(context, router['id']):
-            LOG.debug('Skipping router not managed by TF (%s)', router['id'])
+        router_id = kwargs['router_db']['id']
+        port_id = kwargs['port']['id']
+        if not self.owns_router(context, router_id):
+            LOG.debug('Skipping router not managed by TF (%s)', router_id)
             return
-        repository.router.remove_interface(router['id'], port)
+        repository.router.remove_interface(router_id, port_id)
 
     @registry.receives(resources.PORT, [events.BEFORE_DELETE])
     @log_helpers.log_method_call
@@ -156,7 +156,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
         if not self.owns_router(context, router_id):
             LOG.debug('Skipping router not managed by TF (%s)', router_id)
             return
-        repository.router.remove_interface(router_id, port)
+        repository.router.remove_interface(router_id, port_id)
 
     @registry.receives(resources.PORT, [events.ABORT_DELETE])
     @log_helpers.log_method_call
