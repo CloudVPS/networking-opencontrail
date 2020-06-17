@@ -30,5 +30,6 @@ class NetworkResourceTestCase(base.TestCase):
         network = create(q_network=q_network, project=project)
 
         self.assertEqual(network.uuid, q_network['id'])
-        self.assertEqual(network.name, q_network['name'])
+        self.assertEqual(network.name, q_network['id'])
+        self.assertEqual(network.display_name, q_network['name'])
         self.assertEqual(network.id_perms, vnc_api.IdPermsType(enable=True))

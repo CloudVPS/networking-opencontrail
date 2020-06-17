@@ -22,11 +22,13 @@ LOGICAL_ROUTER_TYPE = 'vxlan-routing'
 
 
 def create(q_router, project):
-    router_name = q_router['name']
     id_perms = vnc_api.IdPermsType(enable=True)
     logical_router = vnc_api.LogicalRouter(
-        name=router_name, parent_obj=project, id_perms=id_perms)
-    logical_router.uuid = q_router['id']
+        name=q_router['id'],
+        display_name=q_router['name'],
+        parent_obj=project,
+        id_perms=id_perms)
     logical_router.set_logical_router_type(LOGICAL_ROUTER_TYPE)
+    logical_router.uuid = q_router['id']
 
     return logical_router

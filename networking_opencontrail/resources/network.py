@@ -21,10 +21,12 @@ LOG = logging.getLogger(__name__)
 
 
 def create(q_network, project):
-    network_name = q_network['name']
     id_perms = vnc_api.IdPermsType(enable=True)
     network = vnc_api.VirtualNetwork(
-        name=network_name, parent_obj=project, id_perms=id_perms)
+        name=q_network['id'],
+        display_name=q_network['name'],
+        parent_obj=project,
+        id_perms=id_perms)
 
     network.uuid = q_network['id']
 
