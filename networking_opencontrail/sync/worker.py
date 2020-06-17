@@ -19,11 +19,10 @@ from eventlet import greenthread
 from neutron_lib import context
 from neutron_lib.plugins import directory
 from neutron_lib import worker
+from oslo_log import log as logging
 
 from networking_opencontrail import repository
 from networking_opencontrail.sync import synchronizers
-
-from oslo_log import log as logging
 
 
 LOG = logging.getLogger(__name__)

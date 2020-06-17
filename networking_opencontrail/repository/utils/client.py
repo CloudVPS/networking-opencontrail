@@ -103,7 +103,14 @@ class TFClient(object):
     def create_network(self, network):
         """Creates Virtual Network with NTF Tag."""
         tagger.assign_to_ntf(network)
-        self.session.virtual_network_create(network)
+        existing_network = self.read_network(network.get_uuid())
+        if not existing_network:
+            self.session.virtual_network_create(network)
+        elif tagger.belongs_to_ntf(existing_network):
+            self.update_network(network)
+        else:
+            LOG.warning("Cannot create VN %s - VN with same UUID "
+                        "exists without ML2 tag.", network.get_uuid())
 
     def update_network(self, network):
         """Updates Virtual Network."""
@@ -111,7 +118,11 @@ class TFClient(object):
 
     def delete_network(self, uuid=None, fq_name=None):
         """Deletes Virtual Network."""
-        self.session.virtual_network_delete(id=uuid, fq_name=fq_name)
+        try:
+            self.session.virtual_network_delete(id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            LOG.debug('Could not delete Virtual Network '
+                      '(uuid: %s, fq_name: %s) - not found', uuid, fq_name)
 
     def list_vmis(self, tagged_only=True):
         """Gets the list of Virtual Machine Interfaces.
@@ -139,7 +150,14 @@ class TFClient(object):
     def create_vmi(self, vmi):
         """Creates Virtual Machine Interface with NTF Tag."""
         tagger.assign_to_ntf(vmi)
-        self.session.virtual_machine_interface_create(vmi)
+        existing_vmi = self.read_vmi(vmi.get_uuid())
+        if not existing_vmi:
+            self.session.virtual_machine_interface_create(vmi)
+        elif tagger.belongs_to_ntf(existing_vmi):
+            self.update_vmi(vmi)
+        else:
+            LOG.warning("Cannot create VMI %s - VMI with same UUID "
+                        "exists without ML2 tag.", vmi.get_uuid())
 
     def update_vmi(self, vmi):
         """Updates Virtual Machine Interface."""
@@ -147,7 +165,12 @@ class TFClient(object):
 
     def delete_vmi(self, uuid=None, fq_name=None):
         """Deletes Virtual Machine Interface."""
-        self.session.virtual_machine_interface_delete(id=uuid, fq_name=fq_name)
+        try:
+            self.session.virtual_machine_interface_delete(
+                id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            LOG.debug('Could not delete Virtual Machine Interface '
+                      '(uuid: %s, fq_name: %s) - not found', uuid, fq_name)
 
     def list_vpgs(self, tagged_only=True):
         """Gets the list of Virtual Port Groups.
@@ -175,7 +198,14 @@ class TFClient(object):
     def create_vpg(self, vpg):
         """Creates Virtual Port Group with NTF Tag."""
         tagger.assign_to_ntf(vpg)
-        self.session.virtual_port_group_create(vpg)
+        existing_vpg = self.read_vpg(vpg.get_uuid())
+        if not existing_vpg:
+            self.session.virtual_port_group_create(vpg)
+        elif tagger.belongs_to_ntf(existing_vpg):
+            self.update_vpg(vpg)
+        else:
+            LOG.warning("Cannot create VPG %s - VPG with same UUID "
+                        "exists without ML2 tag.", vpg.get_uuid())
 
     def update_vpg(self, vpg):
         """Updates Virtual Port Group."""
@@ -183,7 +213,11 @@ class TFClient(object):
 
     def delete_vpg(self, uuid=None, fq_name=None):
         """Deletes Virtual Port Group."""
-        self.session.virtual_port_group_delete(id=uuid, fq_name=fq_name)
+        try:
+            self.session.virtual_port_group_delete(id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            LOG.debug('Could not delete Virtual Portgroup '
+                      '(uuid: %s, fq_name: %s) - not found', uuid, fq_name)
 
     def read_port(self, uuid=None, fq_name=None):
         """Gets Port with spedified uuid or FQ NAME.
@@ -277,7 +311,14 @@ class TFClient(object):
     def create_logical_router(self, router):
         """Creates Logical Router with NTF Tag."""
         tagger.assign_to_ntf(router)
-        self.session.logical_router_create(router)
+        existing_lr = self.read_logical_router(router.get_uuid())
+        if not existing_lr:
+            self.session.logical_router_create(router)
+        elif tagger.belongs_to_ntf(existing_lr):
+            self.update_logical_router(router)
+        else:
+            LOG.warning("Cannot create LR %s - LR with same UUID "
+                        "exists without ML2 tag.", router.get_uuid())
 
     def update_logical_router(self, router):
         """Updates Logical Router."""
@@ -285,7 +326,11 @@ class TFClient(object):
 
     def delete_logical_router(self, uuid=None, fq_name=None):
         """Deletes Logical Router."""
-        self.session.logical_router_delete(id=uuid, fq_name=fq_name)
+        try:
+            self.session.logical_router_delete(id=uuid, fq_name=fq_name)
+        except vnc_api.NoIdError:
+            LOG.debug('Could not delete Logical Router '
+                      '(uuid: %s, fq_name: %s) - not found', uuid, fq_name)
 
     def _filter_tagged_resources(self, objs):
         tagged_objs = []
