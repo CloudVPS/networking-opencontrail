@@ -308,8 +308,8 @@ class RouterSynchronizer(OneToOneResourceSynchronizer):
     def _delete_resource(self, resource_id):
         repository.router.delete(resource_id)
 
-    def _ignore_tf_resource(self, resource):
-        return self._no_ml2_tag(resource)
+    def _ignore_non_ntf_resource(self, resource):
+        return not tagger.belongs_to_ntf(resource)
 
     def _ignore_neutron_resource(self, resource):
         return not validate_flavor(
@@ -338,8 +338,8 @@ class RouterInterfaceSynchronizer(OneToOneResourceSynchronizer):
         router_id = lr_vmi.get_logical_router_back_refs()[0]['uuid']
         repository.router.remove_interface(router_id, resource_id)
 
-    def _ignore_tf_resource(self, resource):
-        return (self._no_ml2_tag(resource)
+    def _ignore_non_ntf_resource(self, resource):
+        return (not tagger.belongs_to_ntf(resource)
                 or not resource.get_logical_router_back_refs())
 
     def _ignore_neutron_resource(self, resource):
