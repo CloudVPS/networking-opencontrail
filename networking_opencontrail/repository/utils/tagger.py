@@ -13,6 +13,7 @@
 #    under the License.
 #
 
+from oslo_config import cfg
 from vnc_api import vnc_api
 
 VALUE = '__ML2__'
@@ -40,3 +41,21 @@ def identifier_tag():
         name=NAME,
         fq_name=FQ_NAME,
     )
+
+
+def verify_data_port(port):
+    """Checks if port instance does not contain management port indication tag.
+
+    The list of ports should be defined in configuration, using
+    APISERVER.management_port_tags option.
+
+    """
+    tag_refs = port.get_tag_refs() or ()
+    tags = {ref['to'][-1] for ref in tag_refs}
+
+    management_tags = set(
+        '{}={}'.format(TYPE, value)
+        for value in cfg.CONF.APISERVER.management_port_tags
+    )
+
+    return not bool(tags & management_tags)

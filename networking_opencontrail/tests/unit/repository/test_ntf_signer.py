@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+import mock
 
 from vnc_api import vnc_api
 
@@ -38,3 +39,37 @@ class NTFSignerTest(base.TestCase):
         network = vnc_api.VirtualNetwork()
         network.add_tag(vnc_api.Tag(name='dummy_tag'))
         self.assertFalse(tagger.belongs_to_ntf(network))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_without_tag_when_undefined(self, cfg):
+        cfg.CONF.APISERVER.management_port_tags = []
+        port = vnc_api.Port()
+        self.assertTrue(tagger.verify_data_port(port))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_without_tag_when_defined(self, cfg):
+        cfg.CONF.APISERVER.management_port_tags = ['tag']
+        port = vnc_api.Port()
+        self.assertTrue(tagger.verify_data_port(port))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_with_tag_not_matched(self, cfg):
+        cfg.CONF.APISERVER.management_port_tags = ['tag']
+        port = vnc_api.Port()
+        port.add_tag(vnc_api.Tag(name='dummy_tag'))
+        self.assertTrue(tagger.verify_data_port(port))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_with_tag_matched(self, cfg):
+        cfg.CONF.APISERVER.management_port_tags = ['tag']
+        port = vnc_api.Port()
+        name = '{}={}'.format(tagger.TYPE, 'tag')
+        port.add_tag(
+            vnc_api.Tag(
+                tag_value='tag',
+                tag_type_name=tagger.TYPE,
+                name=name,
+                fq_name=[name],
+            )
+        )
+        self.assertFalse(tagger.verify_data_port(port))

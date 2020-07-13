@@ -18,7 +18,7 @@ import uuid
 from oslo_log import log as logging
 
 from networking_opencontrail.repository.utils.client import tf_client
-
+from networking_opencontrail.repository.utils.tagger import verify_data_port
 
 LOG = logging.getLogger(__name__)
 
@@ -57,7 +57,8 @@ def request_ports_from_node(node):
     for port_ref in port_refs:
         port_uuid = port_ref['uuid']
         port = tf_client.read_port(uuid=port_uuid)
-        ports.append(port)
+        if verify_data_port(port):
+            ports.append(port)
 
     return ports
 

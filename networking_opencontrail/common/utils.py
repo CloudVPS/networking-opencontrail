@@ -20,38 +20,45 @@ from oslo_config import cfg
 from networking_opencontrail.common import constants
 
 vnc_opts = [
-    cfg.StrOpt('api_server_ip',
-               default=constants.VNC_API_DEFAULT_HOST,
-               help='IP address to connect to VNC API'),
-    cfg.IntOpt('api_server_port',
-               default=constants.VNC_API_DEFAULT_PORT,
-               help='Port to connect to VNC API'),
-    cfg.StrOpt('api_server_base_url',
-               default=constants.VNC_API_DEFAULT_BASE_URL,
-               help='URL path to request VNC API'),
-    cfg.BoolOpt('use_ssl',
-                default=constants.VNC_API_DEFAULT_USE_SSL,
-                help='Use SSL to connect with VNC API'),
-    cfg.BoolOpt('insecure',
-                default=constants.VNC_API_DEFAULT_INSECURE,
-                help='Insecurely connect to VNC API'),
-    cfg.StrOpt('certfile',
-               help='Certificate file path to connect securely to VNC API'),
-    cfg.StrOpt('keyfile',
-               help='Key file path to connect securely to  VNC API'),
-    cfg.StrOpt('cafile',
-               help='CA file path to connect securely to VNC API')
+    cfg.StrOpt(
+        'api_server_ip',
+        default=constants.VNC_API_DEFAULT_HOST,
+        help='IP address to connect to VNC API'),
+    cfg.IntOpt(
+        'api_server_port',
+        default=constants.VNC_API_DEFAULT_PORT,
+        help='Port to connect to VNC API'),
+    cfg.StrOpt(
+        'api_server_base_url',
+        default=constants.VNC_API_DEFAULT_BASE_URL,
+        help='URL path to request VNC API'),
+    cfg.BoolOpt(
+        'use_ssl',
+        default=constants.VNC_API_DEFAULT_USE_SSL,
+        help='Use SSL to connect with VNC API'),
+    cfg.BoolOpt(
+        'insecure',
+        default=constants.VNC_API_DEFAULT_INSECURE,
+        help='Insecurely connect to VNC API'),
+    cfg.StrOpt(
+        'certfile',
+        help='Certificate file path to connect securely to VNC API'),
+    cfg.StrOpt(
+        'keyfile',
+        help='Key file path to connect securely to  VNC API'),
+    cfg.StrOpt(
+        'cafile',
+        help='CA file path to connect securely to VNC API'),
+    cfg.ListOpt(
+        'management_port_tags',
+        default=[],
+        help=(
+            'List of tags used for identifying ports connected to'
+            'the management network'
+        )
+    ),
 ]
-
-dm_integration_opts = [
-    cfg.BoolOpt('enabled',
-                default=False,
-                help='Enable integration with Device Manager to automate '
-                'VLAN configuration on switches'),
-    cfg.StrOpt('topology',
-               help='File path to yaml file with topology of baremetals '
-               'used by DM integration'),
-]
+"""List of options to register in APISERVER section"""
 
 
 def register_vnc_api_options():
