@@ -41,26 +41,26 @@ class NTFSignerTest(base.TestCase):
         self.assertFalse(tagger.belongs_to_ntf(network))
 
     @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
-    def test_dataport_validation_without_tag_when_undefined(self, cfg):
+    def test_management_validation_without_tag_when_undefined(self, cfg):
         cfg.CONF.APISERVER.management_port_tags = []
         port = vnc_api.Port()
-        self.assertTrue(tagger.verify_data_port(port))
+        self.assertFalse(tagger.is_management_port(port))
 
     @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
-    def test_dataport_validation_without_tag_when_defined(self, cfg):
+    def test_management_validation_without_tag_when_defined(self, cfg):
         cfg.CONF.APISERVER.management_port_tags = ['tag']
         port = vnc_api.Port()
-        self.assertTrue(tagger.verify_data_port(port))
+        self.assertFalse(tagger.is_management_port(port))
 
     @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
-    def test_dataport_validation_with_tag_not_matched(self, cfg):
+    def test_management_validation_with_tag_not_matched(self, cfg):
         cfg.CONF.APISERVER.management_port_tags = ['tag']
         port = vnc_api.Port()
         port.add_tag(vnc_api.Tag(name='dummy_tag'))
-        self.assertTrue(tagger.verify_data_port(port))
+        self.assertFalse(tagger.is_management_port(port))
 
     @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
-    def test_dataport_validation_with_tag_matched(self, cfg):
+    def test_management_validation_with_tag_matched(self, cfg):
         cfg.CONF.APISERVER.management_port_tags = ['tag']
         port = vnc_api.Port()
         name = '{}={}'.format(tagger.TYPE, 'tag')
@@ -72,4 +72,38 @@ class NTFSignerTest(base.TestCase):
                 fq_name=[name],
             )
         )
-        self.assertFalse(tagger.verify_data_port(port))
+        self.assertTrue(tagger.is_management_port(port))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_without_tag_when_undefined(self, cfg):
+        cfg.CONF.APISERVER.data_port_tags = []
+        port = vnc_api.Port()
+        self.assertFalse(tagger.is_data_port(port))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_without_tag_when_defined(self, cfg):
+        cfg.CONF.APISERVER.data_port_tags = ['tag']
+        port = vnc_api.Port()
+        self.assertFalse(tagger.is_data_port(port))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_with_tag_not_matched(self, cfg):
+        cfg.CONF.APISERVER.data_port_tags = ['tag']
+        port = vnc_api.Port()
+        port.add_tag(vnc_api.Tag(name='dummy_tag'))
+        self.assertFalse(tagger.is_data_port(port))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_dataport_validation_with_tag_matched(self, cfg):
+        cfg.CONF.APISERVER.data_port_tags = ['tag']
+        port = vnc_api.Port()
+        name = '{}={}'.format(tagger.TYPE, 'tag')
+        port.add_tag(
+            vnc_api.Tag(
+                tag_value='tag',
+                tag_type_name=tagger.TYPE,
+                name=name,
+                fq_name=[name],
+            )
+        )
+        self.assertTrue(tagger.is_data_port(port))
