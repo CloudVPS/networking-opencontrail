@@ -360,6 +360,9 @@ class TestSubnetSynchronization(SynchronizationTestCase):
             'network_id': self.test_network['network']['id'],
             'gateway_ip': '10.10.11.1',
             'ip_version': 4,
+            'allocation_pools': [],
+            'dns_nameservers': [],
+            'host_routes': [],
         }
 
         network = self.tf_get("virtual-network",
