@@ -18,9 +18,12 @@ import uuid
 from oslo_log import log as logging
 
 from networking_opencontrail.repository.utils.client import tf_client
-from networking_opencontrail.repository.utils.tagger import verify_data_port
+from networking_opencontrail.repository.utils.tagger import is_data_port
+from networking_opencontrail.repository.utils.tagger import is_management_port
 
 LOG = logging.getLogger(__name__)
+
+sriov_compute = 'sriov-compute'
 
 
 def request_project(q_object):
@@ -57,10 +60,18 @@ def request_ports_from_node(node):
     for port_ref in port_refs:
         port_uuid = port_ref['uuid']
         port = tf_client.read_port(uuid=port_uuid)
-        if verify_data_port(port):
+        if is_port_managed(node, port):
             ports.append(port)
 
     return ports
+
+
+def is_port_managed(node, port):
+    """Validate if the node is one the plugin should manage."""
+    if node.node_type == sriov_compute:
+        return not is_management_port(port) and not is_data_port(port)
+
+    return not is_management_port(port)
 
 
 def request_physical_interfaces_from_port(port):

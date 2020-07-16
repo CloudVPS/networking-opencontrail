@@ -43,19 +43,38 @@ def identifier_tag():
     )
 
 
-def verify_data_port(port):
+def is_management_port(port):
     """Checks if port instance does not contain management port indication tag.
 
     The list of ports should be defined in configuration, using
     APISERVER.management_port_tags option.
 
     """
-    tag_refs = port.get_tag_refs() or ()
-    tags = {ref['to'][-1] for ref in tag_refs}
+    management_tag_names = cfg.CONF.APISERVER.management_port_tags
 
-    management_tags = set(
+    return check_tags_on_resource(port, management_tag_names)
+
+
+def is_data_port(port):
+    """Checks if port instance does not contain data port indication tag.
+
+    The list of ports should be defined in configuration, using
+    APISERVER.data_port_tags option.
+
+    """
+    data_tag_names = cfg.CONF.APISERVER.data_port_tags
+
+    return check_tags_on_resource(port, data_tag_names)
+
+
+def check_tags_on_resource(resource, tag_names):
+    """Check if resource has any of tags from provided list."""
+    tag_refs = resource.get_tag_refs() or ()
+    resource_tags = {ref['to'][-1] for ref in tag_refs}
+
+    tags = set(
         '{}={}'.format(TYPE, value)
-        for value in cfg.CONF.APISERVER.management_port_tags
+        for value in tag_names
     )
 
-    return not bool(tags & management_tags)
+    return bool(resource_tags & tags)
