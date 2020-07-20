@@ -129,13 +129,13 @@ def _is_managed_by_tf(q_port, q_network):
 
 
 def _vmi_should_exist(q_port, q_network, context):
-    vmi_ports = directory.get_plugin().get_ports(context)
-
-    vmi_ports = (
-        vmi_port for vmi_port in vmi_ports
-        if vmi_port['network_id'] == q_network['id']
-        and vmi_port['binding:host_id'] == q_port['binding:host_id']
-    )
+    port_filters = {
+        'network_id': [q_network['id']],
+        'binding:host_id': [q_port['binding:host_id']]
+    }
+    vmi_ports = directory.get_plugin().get_ports(context,
+                                                 fields=REQUIRED_PORT_FIELDS,
+                                                 filters=port_filters)
 
     return any(_is_managed_by_tf(vmi_port, q_network)
                for vmi_port in vmi_ports)
