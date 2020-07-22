@@ -23,8 +23,6 @@ from networking_opencontrail.repository.utils.tagger import is_management_port
 
 LOG = logging.getLogger(__name__)
 
-sriov_compute = 'sriov-compute'
-
 
 def request_project(q_object):
     project_id = str(uuid.UUID(q_object['tenant_id']))
@@ -53,23 +51,23 @@ def request_node(q_object):
     return node
 
 
-def request_ports_from_node(node):
+def request_ports_from_node(node, port_tag=None):
     port_refs = node.get_ports()
 
     ports = []
     for port_ref in port_refs:
         port_uuid = port_ref['uuid']
         port = tf_client.read_port(uuid=port_uuid)
-        if is_port_managed(node, port):
+        if is_port_managed(node, port, port_tag):
             ports.append(port)
 
     return ports
 
 
-def is_port_managed(node, port):
+def is_port_managed(node, port, tag=None):
     """Validate if the node is one the plugin should manage."""
-    if node.node_type == sriov_compute:
-        return not is_management_port(port) and not is_data_port(port)
+    if tag is not None:
+        return not is_management_port(port) and is_data_port(port, tag)
 
     return not is_management_port(port)
 
@@ -96,8 +94,8 @@ def request_physical_interfaces_from_ports(ports):
     return list(set(physical_interfaces))  # delete repetitions
 
 
-def request_physical_interfaces_from_node(node):
-    ports = request_ports_from_node(node)
+def request_physical_interfaces_from_node(node, filter_port_tag=None):
+    ports = request_ports_from_node(node, filter_port_tag)
     physical_interfaces = request_physical_interfaces_from_ports(ports)
 
     return physical_interfaces

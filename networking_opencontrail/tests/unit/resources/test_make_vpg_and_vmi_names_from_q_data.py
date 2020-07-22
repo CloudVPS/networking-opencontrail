@@ -22,32 +22,38 @@ PORT_NETWORK_1_NODE_1 = {
     "device_owner": "compute:test-nova",
     "binding:host_id": "test-node-1",
     "network_id": "test-network-1-id",
+    "binding:vif_type": "ovs",
 }
 PORT_NETWORK_2_NODE_1 = {
     "device_owner": "compute:test-nova",
     "binding:host_id": "test-node-1",
     "network_id": "test-network-2-id",
+    "binding:vif_type": "ovs",
 }
 PORT_NETWORK_1_NODE_2 = {
     "device_owner": "compute:test-nova",
     "binding:host_id": "test-node-2",
     "network_id": "test-network-1-id",
+    "binding:vif_type": "ovs",
 }
 PORT_NETWORK_2_NODE_2 = {
     "device_owner": "compute:test-nova",
     "binding:host_id": "test-node-2",
     "network_id": "test-network-2-id",
+    "binding:vif_type": "ovs",
 }
 
 NETWORK_1 = {
     "name": "test-network-1",
     "id": "test-network-1-id",
     "provider:segmentation_id": 1,
+    "provider:physical_network": "provider",
 }
 NETWORK_2 = {
     "name": "test-network-2",
     "id": "test-network-2-id",
     "provider:segmentation_id": 2,
+    "provider:physical_network": "provider",
 }
 
 

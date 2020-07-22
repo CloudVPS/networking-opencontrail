@@ -101,8 +101,10 @@ class OpenContrailMechDriver(api.MechanismDriver):
         q_port = context.current
         q_network = context.network.current
 
-        repository.vpg.create(q_port, q_network)
-        repository.vmi.create(q_port, q_network)
+        vpg = repository.vpg.create(q_port, q_network)
+        if vpg is None:
+            return
+        repository.vmi.create(q_port, q_network, vpg.name)
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def update_port_postcommit(self, context):
@@ -114,8 +116,10 @@ class OpenContrailMechDriver(api.MechanismDriver):
         repository.vmi.delete(old_q_port, q_network, context._plugin_context)
         repository.vpg.delete(old_q_port, q_network)
 
-        repository.vpg.create(q_port, q_network)
-        repository.vmi.create(q_port, q_network)
+        vpg = repository.vpg.create(q_port, q_network)
+        if vpg is None:
+            return
+        repository.vmi.create(q_port, q_network, vpg.name)
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_port_postcommit(self, context):

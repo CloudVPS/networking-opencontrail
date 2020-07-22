@@ -131,16 +131,16 @@ class VPGSynchronizer(ResourceSynchronizer):
 
     @staticmethod
     def _create_vpg_in_tf(vpg_name):
-        node_name = resources.vpg.unzip_name(vpg_name)
+        node_name, _ = resources.vpg.unzip_name(vpg_name)
         node = request_node_from_host(node_name)
 
-        vpg = repository.vpg.create_from_node(node)
+        vpg = repository.vpg.create_for_node(node)
         VPGSynchronizer._attach_existing_vmis(vpg)
 
     @staticmethod
     def _attach_existing_vmis(vpg):
         vmis = repository.tf_client.list_vmis()
-        node_name = resources.vpg.unzip_name(vpg.name)
+        node_name, _ = resources.vpg.unzip_name(vpg.name)
 
         for vmi in vmis:
             _, vmi_node_name = resources.vmi.unzip_name(vmi.name)

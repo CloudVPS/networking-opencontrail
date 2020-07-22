@@ -53,15 +53,29 @@ class VPGResourceTestCase(base.TestCase):
             vpg.physical_interface_refs, expected_physical_interface_refs)
 
     def test_make_name(self):
-        node = vnc_api.Node(name='test-node.novalocal')
-        vpg_name = make_name(node.name)
+        vpg_name = make_name('test-node.novalocal')
 
         self.assertEqual(vpg_name, 'vpg#test-node.novalocal')
+
+    def test_make_name_with_network(self):
+        vpg_name = make_name('test-node.novalocal', 'tenant')
+
+        self.assertEqual(vpg_name, 'vpg#test-node.novalocal#tenant')
 
     def test_unzip_name(self):
         expected_node_name = 'my-n0de_'
 
         vmi_name = make_name(expected_node_name)
-        node_name = unzip_name(vmi_name)
+        node_name, _ = unzip_name(vmi_name)
 
         self.assertEqual(node_name, expected_node_name)
+
+    def test_unzip_name_with_network(self):
+        expected_node_name = 'my-n0de_'
+        expected_network_name = 'my-net'
+
+        vmi_name = make_name(expected_node_name, expected_network_name)
+        node_name, network_name = unzip_name(vmi_name)
+
+        self.assertEqual(node_name, expected_node_name)
+        self.assertEqual(network_name, expected_network_name)

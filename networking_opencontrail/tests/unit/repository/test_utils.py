@@ -49,7 +49,6 @@ class NTFSignerTest(base.TestCase):
 
     @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
     def test_is_port_managed_when_ovs_and_data(self, cfg):
-        cfg.CONF.APISERVER.data_port_tags = ['tag']
         node = vnc_api.Node(name="node")
         node.node_type = 'ovs-compute'
         port = vnc_api.Port()
@@ -66,6 +65,14 @@ class NTFSignerTest(base.TestCase):
 
     @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
     def test_is_port_managed_when_sriov_and_untagged(self, cfg):
+        cfg.CONF.APISERVER.management_port_tags = ['tag']
+        node = vnc_api.Node(name="node")
+        node.node_type = 'sriov-compute'
+        port = vnc_api.Port()
+        self.assertFalse(is_port_managed(node, port, 'data'))
+
+    @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
+    def test_is_port_managed_when_sriov_and_untagged_without_tag(self, cfg):
         cfg.CONF.APISERVER.management_port_tags = ['tag']
         node = vnc_api.Node(name="node")
         node.node_type = 'sriov-compute'
@@ -87,21 +94,21 @@ class NTFSignerTest(base.TestCase):
                 fq_name=[name],
             )
         )
-        self.assertFalse(is_port_managed(node, port))
+        self.assertFalse(is_port_managed(node, port, 'data'))
 
     @mock.patch("networking_opencontrail.repository.utils.tagger.cfg")
     def test_is_port_managed_when_sriov_and_data(self, cfg):
-        cfg.CONF.APISERVER.data_port_tags = ['tag']
+        cfg.CONF.APISERVER.management_port_tags = ['tag']
         node = vnc_api.Node(name="node")
         node.node_type = 'sriov-compute'
         port = vnc_api.Port()
-        name = '{}={}'.format(tagger.TYPE, 'tag')
+        name = '{}={}'.format(tagger.TYPE, 'data')
         port.add_tag(
             vnc_api.Tag(
-                tag_value='tag',
+                tag_value='data',
                 tag_type_name=tagger.TYPE,
                 name=name,
                 fq_name=[name],
             )
         )
-        self.assertFalse(is_port_managed(node, port))
+        self.assertTrue(is_port_managed(node, port, 'data'))

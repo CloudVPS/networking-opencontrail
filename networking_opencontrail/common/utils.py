@@ -57,15 +57,6 @@ vnc_opts = [
             'the management network'
         )
     ),
-    cfg.ListOpt(
-        'data_port_tags',
-        default=[],
-        help=(
-            'List of tags used for identifying ports connected to'
-            'the data network - those ports are used for ovs computes'
-            'and ignored on sriov computes'
-        )
-    ),
 ]
 """List of options to register in APISERVER section"""
 

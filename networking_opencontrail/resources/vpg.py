@@ -24,8 +24,8 @@ from networking_opencontrail.resources.vmi import validate
 LOG = logging.getLogger(__name__)
 
 
-def create(node, physical_interfaces, fabric):
-    name = make_name(node.name)
+def create(node, physical_interfaces, fabric, network_name=None):
+    name = make_name(node.name, network_name)
     id_perms = vnc_api.IdPermsType(enable=True)
     vpg = vnc_api.VirtualPortGroup(
         name=name, parent_obj=fabric, id_perms=id_perms)
@@ -39,13 +39,20 @@ def create(node, physical_interfaces, fabric):
     return vpg
 
 
-def make_name(node_name):
-    return 'vpg#{}'.format(node_name)
+def make_name(node, network=None):
+    """Generate VPG name based on provided strings"""
+    elements = ('vpg', node, network) if network else ('vpg', node)
+    name = '#'.join(elements)
+
+    return name
 
 
 def unzip_name(vpg_name):
-    _, node_name, = vpg_name.split('#')
-    return node_name
+    elements = vpg_name.split('#')
+    node_name = elements[1]
+    network_name = elements[2] if len(elements) == 3 else None
+
+    return node_name, network_name
 
 
 def make_names_from_q_data(q_ports, q_networks):
@@ -63,6 +70,15 @@ def make_names_from_q_data(q_ports, q_networks):
     (one for each node) must be created. Their names will be:
     vpg#node-1
     vpg#node-2
+
+    On SRiOV nodes those VPG are created on per physical network basis. In this
+    case the names contain additional member, the physical network name. They
+    will be like
+
+    vpg#node-sriov-1#sriovnet-1
+
+    The distinction of sriov nodes is performed based on check
+    if `vif_type=sriov`.
 
     :param q_ports: list of Neutron ports
     :type q_ports: list
@@ -86,7 +102,13 @@ def make_names_from_q_data(q_ports, q_networks):
                 continue
 
             node_name = q_port['binding:host_id']
-            vpg_name = make_name(node_name)
+
+            if q_port['binding:vif_type'] == 'hw_veb':
+                network_name = q_network['provider:physical_network']
+                vpg_name = make_name(node_name, network_name)
+            else:
+                vpg_name = make_name(node_name)
+
             vpg_names.add(vpg_name)
 
     return vpg_names
