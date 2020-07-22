@@ -16,19 +16,15 @@
 from neutron_lib import context
 from neutron_lib.plugins import constants as plugin_constants
 from neutron_lib.plugins import directory
-from oslo_concurrency import lockutils
 from oslo_log import log as logging
 
-from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
 from networking_opencontrail.common import utils
 from networking_opencontrail.l3.service_provider import validate_flavor
 from networking_opencontrail import repository
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_node
 from networking_opencontrail import resources
-from networking_opencontrail.sync.base import OneToOneResourceSynchronizer
-from networking_opencontrail.sync.base import ResourceSynchronizer
-
+from networking_opencontrail.sync import base
 
 LOG = logging.getLogger(__name__)
 L3_SERVICE_PROVIDER_NAME = \
@@ -57,7 +53,7 @@ def list_q_router_interfaces():
     return q_ports
 
 
-class NetworkSynchronizer(OneToOneResourceSynchronizer):
+class NetworkSynchronizer(base.OneToOneResourceSynchronizer):
     """A Network Synchronizer class.
 
     Provides methods used to synchronize networks.
@@ -83,16 +79,13 @@ class NetworkSynchronizer(OneToOneResourceSynchronizer):
         return "_snat_" in resource["name"]
 
 
-class VPGSynchronizer(ResourceSynchronizer):
+class VPGSynchronizer(base.ResourceSynchronizer):
     """A Virtual Portgroup Synchronizer class.
 
     Provides methods used to synchronize Virtual Portgroups (VPGs).
     """
-    LOG_RES_NAME = "VPG"
 
-    def synchronize(self):
-        raise Exception(
-            "Synchronisation should be run through VPGAndVMISynchronizer")
+    LOG_RES_NAME = "VPG"
 
     def calculate_diff(self):
         q_networks = list_q_networks()
@@ -103,48 +96,32 @@ class VPGSynchronizer(ResourceSynchronizer):
         vpgs = repository.tf_client.list_vpgs()
         vpg_names_from_tf_data = self._make_vpg_names_from_tf_data(vpgs)
 
-        vpg_names_to_create = vpg_names_from_q_data - vpg_names_from_tf_data
-        vpg_names_to_delete = vpg_names_from_tf_data - vpg_names_from_q_data
+        self.to_create = vpg_names_from_q_data - vpg_names_from_tf_data
+        self.to_delete = vpg_names_from_tf_data - vpg_names_from_q_data
 
-        return vpg_names_to_create, vpg_names_to_delete
+    def _create_resources(self):
+        for vpg_name in self.to_create:
+            node_name, _ = resources.vpg.unzip_name(vpg_name)
+            node = request_node(node_name)
+
+            repository.vpg.create_for_node(node)
+
+    def _delete_resources(self):
+        for vpg_name in self.to_delete:
+            vpg_uuid = utils.make_uuid(vpg_name)
+            repository.tf_client.delete_vpg(uuid=vpg_uuid)
 
     @staticmethod
     def _make_vpg_names_from_tf_data(vpgs):
         return set(vpg.name for vpg in vpgs if tagger.belongs_to_ntf(vpg))
 
-    def create_vpgs_in_tf(self, vpg_names):
-        for vpg_name in vpg_names:
-            self._create_vpg_in_tf(vpg_name)
 
-    @staticmethod
-    def delete_vpgs_from_tf(vpg_names):
-        for vpg_name in vpg_names:
-            vpg_uuid = utils.make_uuid(vpg_name)
-
-            vpg = repository.tf_client.read_vpg(uuid=vpg_uuid)
-            if vpg is None:
-                LOG.debug("Couldn't delete VPG %s - not found", vpg_uuid)
-                return
-
-            repository.tf_client.delete_vpg(uuid=vpg_uuid)
-
-    @staticmethod
-    def _create_vpg_in_tf(vpg_name):
-        node_name, _ = resources.vpg.unzip_name(vpg_name)
-        node = request_node(node_name)
-        repository.vpg.create_for_node(node)
-
-
-class VMISynchronizer(ResourceSynchronizer):
+class VMISynchronizer(base.ResourceSynchronizer):
     """A Virtual Machine Interface Synchronizer class.
 
     Provides methods used to synchronize Virtual Machine Interfaces (VMIs).
     """
     LOG_RES_NAME = "VMI"
-
-    def synchronize(self):
-        raise Exception(
-            "Synchronisation should be run through VPGAndVMISynchronizer")
 
     def calculate_diff(self):
         q_networks = list_q_networks()
@@ -152,19 +129,16 @@ class VMISynchronizer(ResourceSynchronizer):
         vmi_names_from_q_data = \
             resources.vmi.make_names_from_q_data(q_ports, q_networks)
 
-        vmis = repository.tf_client.list_vmis()
+        vmis = [vmi for vmi in repository.tf_client.list_vmis()
+                if not vmi.get_logical_router_back_refs()]
         vmi_names_from_tf_data = self._make_vmi_names_from_tf_data(vmis)
 
-        vmi_names_to_create = vmi_names_from_q_data - vmi_names_from_tf_data
-        vmi_names_to_delete = vmi_names_from_tf_data - vmi_names_from_q_data
+        self.to_create = vmi_names_from_q_data - vmi_names_from_tf_data
+        self.to_delete = vmi_names_from_tf_data - vmi_names_from_q_data
 
-        return vmi_names_to_create, vmi_names_to_delete
+    def _create_resources(self):
+        vmi_names = self.to_create
 
-    @staticmethod
-    def _make_vmi_names_from_tf_data(vmis):
-        return set(vmi.name for vmi in vmis if tagger.belongs_to_ntf(vmi))
-
-    def create_vmis_in_tf(self, vmi_names):
         nodes = self._get_vmi_nodes(vmi_names)
 
         if len(vmi_names) > 0 and nodes is None:
@@ -188,9 +162,8 @@ class VMISynchronizer(ResourceSynchronizer):
                 return None
         return nodes
 
-    @staticmethod
-    def delete_vmis_from_tf(vmi_names):
-        for vmi_name in vmi_names:
+    def _delete_resources(self):
+        for vmi_name in self.to_delete:
             vmi_uuid = utils.make_uuid(vmi_name)
 
             vmi = repository.tf_client.read_vmi(uuid=vmi_uuid)
@@ -237,35 +210,12 @@ class VMISynchronizer(ResourceSynchronizer):
         repository.vmi.create_from_tf_data(
             project, network, node_name, vlan_id, vpg_name)
 
-
-class VPGAndVMISynchronizer(ResourceSynchronizer):
-    """A VPG/VMI Synchronizer class.
-
-    Since VPGs and VMIs are closely related in VNC, this class is used to
-    conduct the synchronization process of both resource types based on
-    information provided by VPG and VMI synchronizers.
-    """
-    LOG_RES_NAME = "VPGAndVMI"
-
-    def __init__(self):
-        self.vpg_synchronizer = VPGSynchronizer()
-        self.vmi_synchronizer = VMISynchronizer()
-
-    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
-    def synchronize(self):
-        vmi_names_to_create, vmi_names_to_delete = \
-            self.vmi_synchronizer.calculate_diff()
-        vpg_names_to_create, vpg_names_to_delete = \
-            self.vpg_synchronizer.calculate_diff()
-
-        self.vpg_synchronizer.create_vpgs_in_tf(vpg_names_to_create)
-        self.vmi_synchronizer.create_vmis_in_tf(vmi_names_to_create)
-
-        self.vmi_synchronizer.delete_vmis_from_tf(vmi_names_to_delete)
-        self.vpg_synchronizer.delete_vpgs_from_tf(vpg_names_to_delete)
+    @staticmethod
+    def _make_vmi_names_from_tf_data(vmis):
+        return set(vmi.name for vmi in vmis if tagger.belongs_to_ntf(vmi))
 
 
-class SubnetSynchronizer(OneToOneResourceSynchronizer):
+class SubnetSynchronizer(base.OneToOneResourceSynchronizer):
     """A Subnet Synchronizer class.
 
     Provides methods used to synchronize subnets.
@@ -304,7 +254,7 @@ class SubnetSynchronizer(OneToOneResourceSynchronizer):
         repository.subnet.delete({"id": resource_id})
 
 
-class RouterSynchronizer(OneToOneResourceSynchronizer):
+class RouterSynchronizer(base.OneToOneResourceSynchronizer):
     """A Router Synchronizer class.
 
     Provides methods used to synchronize Logical Routers.
@@ -332,7 +282,7 @@ class RouterSynchronizer(OneToOneResourceSynchronizer):
             L3_SERVICE_PROVIDER_NAME, resource, self._context)
 
 
-class RouterInterfaceSynchronizer(OneToOneResourceSynchronizer):
+class RouterInterfaceSynchronizer(base.OneToOneResourceSynchronizer):
     """A Router Interface Synchronizer class.
 
     Provides methods used to synchronize VMIs for LR Interfaces.

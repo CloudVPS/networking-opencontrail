@@ -33,8 +33,9 @@ class TFSyncWorker(worker.BaseWorker):
         super(TFSyncWorker, self).__init__()
         self.synchronizers = [
             synchronizers.NetworkSynchronizer(),
-            synchronizers.VPGAndVMISynchronizer(),
             synchronizers.SubnetSynchronizer(),
+            synchronizers.VPGSynchronizer(),
+            synchronizers.VMISynchronizer(),
             synchronizers.RouterSynchronizer(),
             synchronizers.RouterInterfaceSynchronizer(),
         ]
@@ -80,7 +81,9 @@ class TFSyncWorker(worker.BaseWorker):
 
     def _synchronize(self):
         for synchronizer in self.synchronizers:
-            synchronizer.synchronize()
+            synchronizer.sync_create()
+        for synchronizer in reversed(self.synchronizers):
+            synchronizer.sync_delete()
 
     @property
     def _core_plugin(self):

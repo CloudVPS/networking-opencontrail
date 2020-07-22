@@ -34,9 +34,40 @@ class ResourceSynchronizer(object):
     implemented. It also enforces synchronize() method implementation in all
     children classes.
     """
+    def __init__(self):
+        self.to_create = []
+        self.to_delete = []
+
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
+    def sync_create(self):
+        """Create lacking objects in VNC API.
+
+        Call calculate_diff to prepare lists of uuids to be used by
+        resource-specific methods called after that.
+        """
+        self.calculate_diff()
+        self._create_resources()
+
+    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
+    def sync_delete(self):
+        """Delete stale objects from VNC API.
+
+        Call calculate_diff to prepare lists of uuids to be used by
+        resource-specific methods called after that.
+        """
+        self.calculate_diff()
+        self._delete_resources()
 
     @abc.abstractmethod
-    def synchronize(self):
+    def calculate_diff(self):
+        pass
+
+    @abc.abstractmethod
+    def _create_resources(self):
+        pass
+
+    @abc.abstractmethod
+    def _delete_resources(self):
         pass
 
     @property
@@ -58,20 +89,6 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
     in TF and Neutron and uses resource-specific methods implemented by the
     child classes to create/delete resources that are out-of-sync.
     """
-    def __init__(self):
-        self.to_create = []
-        self.to_delete = []
-
-    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
-    def synchronize(self):
-        """Synchronize resources.
-
-        Call calculate_diff to prepare lists of uuids to be used by
-        resource-specific methods called after that.
-        """
-        self.calculate_diff()
-        self._delete_resources()
-        self._create_resources()
 
     def calculate_diff(self):
         """Calculate Neutron/TF resource diff.
