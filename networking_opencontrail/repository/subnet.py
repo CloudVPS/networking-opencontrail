@@ -100,6 +100,7 @@ def _get_default_ipam(project):
 def _create_default_ipam(project):
     ipam = vnc_api.NetworkIpam(DEFAULT_IPAM_NAME, parent_obj=project)
     tf_client.create_network_ipam(ipam)
+    return _read_default_ipam(project)
 
 
 def _read_default_ipam(project):
