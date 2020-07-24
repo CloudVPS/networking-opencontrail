@@ -25,6 +25,8 @@ from networking_opencontrail import resources
 
 LOG = logging.getLogger(__name__)
 
+PHYSICAL_NETWORK = 'provider:physical_network'
+
 
 @reconnect
 def create(q_port, q_network):
@@ -36,12 +38,15 @@ def create(q_port, q_network):
         return
 
     node = utils.request_node(q_port)
-    vpg = _read_from_node(node)
-    if vpg:
-        LOG.info("VPG for port %s already exists", q_port["id"])
-        return
 
-    vpg = create_from_node(node)
+    if resources.utils.is_sriov_node(node):
+        physical_network = q_network[PHYSICAL_NETWORK]
+        vpg = create_for_physical_network(node, physical_network)
+
+        return vpg
+
+    vpg = create_for_node(node)
+
     return vpg
 
 
@@ -55,7 +60,12 @@ def delete(q_port, q_network):
         return
 
     node = utils.request_node(q_port)
-    vpg = _read_from_node(node)
+    if resources.utils.is_sriov_node(node):
+        physical_network = q_network[PHYSICAL_NETWORK]
+        vpg = _read_from_node_and_network(node, physical_network)
+    else:
+        vpg = _read_from_node(node)
+
     if not vpg:
         LOG.error("Couldn't find VPG for q_port %s", q_port["id"])
         return
@@ -73,6 +83,7 @@ def delete(q_port, q_network):
 
 
 def _read_from_node(node):
+    """Read VPG from node"""
     vpg_name = resources.vpg.make_name(node.name)
     vpg_uuid = make_uuid(vpg_name)
     vpg = tf_client.read_vpg(uuid=vpg_uuid)
@@ -80,17 +91,55 @@ def _read_from_node(node):
     return vpg
 
 
+def _read_from_node_and_network(node, network_name):
+    """Read VPG from node and network."""
+    vpg_name = resources.vpg.make_name(node.name, network_name)
+    vpg_uuid = make_uuid(vpg_name)
+    vpg = tf_client.read_vpg(uuid=vpg_uuid)
+
+    return vpg
+
+
 @reconnect
-def create_from_node(node):
+def create_for_node(node):
+    """Create a VPG attached to the provided node."""
+    vpg = _read_from_node(node)
+
+    if vpg:
+        LOG.info("VPG %s already exists", vpg.display_name)
+        return vpg
+
     physical_interfaces = utils.request_physical_interfaces_from_node(node)
+
     fabric = utils.request_fabric_from_node(node)
     if not fabric:
-        LOG.error("Couldn't find fabric for VPG")
-        return
+        raise Exception("Couldn't find fabric for VPG")
 
     vpg = resources.vpg.create(node, physical_interfaces, fabric)
-
     tf_client.create_vpg(vpg)
+
+    return vpg
+
+
+@reconnect
+def create_for_physical_network(node, network_name):
+    """Create a VPG attached to the provided node and physical network."""
+    vpg = _read_from_node_and_network(node, network_name)
+
+    if vpg:
+        LOG.info("VPG %s already exists", vpg.display_name)
+        return vpg
+
+    physical_interfaces = utils.request_physical_interfaces_from_node(
+        node, network_name)
+
+    fabric = utils.request_fabric_from_node(node)
+    if not fabric:
+        raise Exception("Couldn't find fabric for VPG")
+
+    vpg = resources.vpg.create(node, physical_interfaces, fabric, network_name)
+    tf_client.create_vpg(vpg)
+
     return vpg
 
 

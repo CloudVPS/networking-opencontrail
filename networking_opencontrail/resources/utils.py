@@ -13,6 +13,23 @@
 #    under the License.
 #
 
+sriov_compute = 'sriov-compute'
+ovs_compute = 'ovs-compute'
+baremetal = 'baremetal'
+
+
+def is_sriov_node(node):
+    """Determine if node uses sriov data ports."""
+    return node.node_type == sriov_compute
+
+
+def is_ovs_port(node):
+    """Determine if node uses ovs data ports.
+
+    Both ovs-compute and baremetal NodeType match this.
+    """
+    return node.node_type in (baremetal, ovs_compute)
+
 
 def first(iterable, condition=lambda x: True, default=None):
     return next(

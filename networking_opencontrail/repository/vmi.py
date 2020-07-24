@@ -34,7 +34,7 @@ REQUIRED_PORT_FIELDS = [
 
 
 @reconnect
-def create(q_port, q_network):
+def create(q_port, q_network, vpg_name):
     try:
         resources.vmi.validate(q_port, q_network)
     except ValueError as e:
@@ -51,7 +51,7 @@ def create(q_port, q_network):
 
     network = tf_client.read_network(uuid=q_network["id"])
     vlan_id = q_network.get("provider:segmentation_id")
-    create_from_tf_data(project, network, node_name, vlan_id)
+    create_from_tf_data(project, network, node_name, vlan_id, vpg_name)
 
 
 @reconnect
@@ -94,19 +94,18 @@ def vmi_exists(network_uuid, node_name):
 
 
 @reconnect
-def create_from_tf_data(project, network, node_name, vlan_id):
+def create_from_tf_data(project, network, node_name, vlan_id, vpg_name):
     vmi = resources.vmi.create(project, network, node_name, vlan_id)
 
     tf_client.create_vmi(vmi)
 
-    _attach_to_vpg(vmi, node_name)
+    _attach_to_vpg(vmi, vpg_name)
 
 
-def _attach_to_vpg(vmi, node_name):
-    vpg_name = resources.vpg.make_name(node_name)
+def _attach_to_vpg(vmi, vpg_name):
     vpg_uuid = utils.make_uuid(vpg_name)
-    vpg = tf_client.read_vpg(uuid=vpg_uuid)
 
+    vpg = tf_client.read_vpg(uuid=vpg_uuid)
     vpg.add_virtual_machine_interface(vmi)
     tf_client.update_vpg(vpg)
 

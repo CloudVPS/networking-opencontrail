@@ -29,8 +29,7 @@ def assign_to_ntf(obj):
 
 def belongs_to_ntf(obj):
     """Returns true if the object was created by the NTF"""
-    tag_refs = obj.get_tag_refs() or ()
-    return FQ_NAME in [ref['to'] for ref in tag_refs]
+    return is_tagged(obj, NAME)
 
 
 def identifier_tag():
@@ -43,6 +42,12 @@ def identifier_tag():
     )
 
 
+def is_tagged(resource, tag):
+    """Check if tag is in resource"""
+    tag_refs = resource.get_tag_refs() or ()
+    return tag in {ref['to'][-1] for ref in tag_refs}
+
+
 def is_management_port(port):
     """Checks if port instance does not contain management port indication tag.
 
@@ -51,20 +56,13 @@ def is_management_port(port):
 
     """
     management_tag_names = cfg.CONF.APISERVER.management_port_tags
-
     return check_tags_on_resource(port, management_tag_names)
 
 
-def is_data_port(port):
-    """Checks if port instance does not contain data port indication tag.
-
-    The list of ports should be defined in configuration, using
-    APISERVER.data_port_tags option.
-
-    """
-    data_tag_names = cfg.CONF.APISERVER.data_port_tags
-
-    return check_tags_on_resource(port, data_tag_names)
+def is_data_port(port, tag_name):
+    """Checks if port instance does contain data port tag provided."""
+    tag = '{}={}'.format(TYPE, tag_name)
+    return is_tagged(port, tag)
 
 
 def check_tags_on_resource(resource, tag_names):
