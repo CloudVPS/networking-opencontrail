@@ -37,7 +37,7 @@ def create(q_port, q_network):
         LOG.debug(e)
         return
 
-    node = utils.request_node(q_port)
+    node = utils.request_node(q_port['binding:host_id'])
 
     if resources.utils.is_sriov_node(node):
         physical_network = q_network[PHYSICAL_NETWORK]
@@ -59,7 +59,7 @@ def delete(q_port, q_network):
         LOG.debug(e)
         return
 
-    node = utils.request_node(q_port)
+    node = utils.request_node(q_port['binding:host_id'])
     if resources.utils.is_sriov_node(node):
         physical_network = q_network[PHYSICAL_NETWORK]
         vpg = _read_from_node_and_network(node, physical_network)

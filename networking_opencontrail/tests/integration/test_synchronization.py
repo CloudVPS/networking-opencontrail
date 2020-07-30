@@ -143,10 +143,6 @@ class TestVPGSynchronization(SynchronizationTestCase):
             "virtual-port-group", vpg_uuid)
         self.assertIsNotNone(vpg)
 
-        vmi_refs = vpg.get_virtual_machine_interface_refs()
-        self.assertEqual(1, len(vmi_refs))
-        self.assertEqual(vmi_uuid, vmi_refs[0]["uuid"])
-
     def test_redelete(self):
         tagged_vpg_name = resources.vpg.make_name('compute-node')
         tagged_vpg = vnc_api.VirtualPortGroup(

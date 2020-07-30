@@ -24,8 +24,7 @@ from networking_opencontrail.common import utils
 from networking_opencontrail.l3.service_provider import validate_flavor
 from networking_opencontrail import repository
 from networking_opencontrail.repository.utils import tagger
-from networking_opencontrail.repository.utils.utils import (
-    request_node_from_host)
+from networking_opencontrail.repository.utils.utils import request_node
 from networking_opencontrail import resources
 from networking_opencontrail.sync.base import OneToOneResourceSynchronizer
 from networking_opencontrail.sync.base import ResourceSynchronizer
@@ -132,22 +131,8 @@ class VPGSynchronizer(ResourceSynchronizer):
     @staticmethod
     def _create_vpg_in_tf(vpg_name):
         node_name, _ = resources.vpg.unzip_name(vpg_name)
-        node = request_node_from_host(node_name)
-
-        vpg = repository.vpg.create_for_node(node)
-        VPGSynchronizer._attach_existing_vmis(vpg)
-
-    @staticmethod
-    def _attach_existing_vmis(vpg):
-        vmis = repository.tf_client.list_vmis()
-        node_name, _ = resources.vpg.unzip_name(vpg.name)
-
-        for vmi in vmis:
-            _, vmi_node_name = resources.vmi.unzip_name(vmi.name)
-            if vmi_node_name == node_name:
-                vpg.add_virtual_machine_interface(vmi)
-
-        repository.tf_client.update_vpg(vpg)
+        node = request_node(node_name)
+        repository.vpg.create_for_node(node)
 
 
 class VMISynchronizer(ResourceSynchronizer):
@@ -180,8 +165,28 @@ class VMISynchronizer(ResourceSynchronizer):
         return set(vmi.name for vmi in vmis if tagger.belongs_to_ntf(vmi))
 
     def create_vmis_in_tf(self, vmi_names):
+        nodes = self._get_vmi_nodes(vmi_names)
+
+        if len(vmi_names) > 0 and nodes is None:
+            return
+
         for vmi_name in vmi_names:
-            self._create_vmi_in_tf(vmi_name)
+            self._create_vmi_in_tf(vmi_name, nodes)
+
+    def _get_vmi_nodes(self, vmi_names):
+        nodes = {}
+        for vmi_name in vmi_names:
+            _, node_name = resources.vmi.unzip_name(vmi_name)
+            if node_name in nodes.keys():
+                continue
+
+            nodes[node_name] = request_node(node_name)
+
+            if nodes[node_name] is None:
+                LOG.error("Couldn't find node %s for VMI %s",
+                          node_name, vmi_name)
+                return None
+        return nodes
 
     @staticmethod
     def delete_vmis_from_tf(vmi_names):
@@ -196,7 +201,7 @@ class VMISynchronizer(ResourceSynchronizer):
             repository.vmi.detach_from_vpg(vmi)
             repository.tf_client.delete_vmi(uuid=vmi_uuid)
 
-    def _create_vmi_in_tf(self, vmi_name):
+    def _create_vmi_in_tf(self, vmi_name, nodes):
         network_uuid, node_name = resources.vmi.unzip_name(vmi_name)
 
         network = repository.tf_client.read_network(uuid=network_uuid)
@@ -217,9 +222,20 @@ class VMISynchronizer(ResourceSynchronizer):
             LOG.error("Couldn't find q-network for VMI %s", vmi_name)
             return
 
+        node = nodes.get(node_name)
+        if node is None:
+            LOG.error("Couldn't find node %s for VMI %s", node_name, vmi_name)
+            return
+
+        if resources.utils.is_sriov_node(node):
+            physical_network = q_network[repository.vpg.PHYSICAL_NETWORK]
+            vpg_name = resources.vpg.make_name(node_name, physical_network)
+        else:
+            vpg_name = resources.vpg.make_name(node_name)
+
         vlan_id = q_network.get('provider:segmentation_id')
         repository.vmi.create_from_tf_data(
-            project, network, node_name, vlan_id)
+            project, network, node_name, vlan_id, vpg_name)
 
 
 class VPGAndVMISynchronizer(ResourceSynchronizer):

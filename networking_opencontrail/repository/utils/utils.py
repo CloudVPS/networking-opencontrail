@@ -36,18 +36,12 @@ def request_network(q_object):
     return network
 
 
-def request_node_from_host(host_id):
+def request_node(name):
     node_fq_name = [
         'default-global-system-config',
-        host_id
+        name
     ]
     node = tf_client.read_node(fq_name=node_fq_name)
-    return node
-
-
-def request_node(q_object):
-    host_id = q_object['binding:host_id']
-    node = request_node_from_host(host_id)
     return node
 
 

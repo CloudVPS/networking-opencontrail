@@ -103,8 +103,11 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
         vpg = repository.vpg.create(q_port, q_network)
         if vpg is None:
+            LOG.error("VPG for port {} could not be created.".format(
+                q_port["id"]
+            ))
             return
-        repository.vmi.create(q_port, q_network, vpg.name)
+        repository.vmi.create(q_port, q_network)
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def update_port_postcommit(self, context):
@@ -118,8 +121,11 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
         vpg = repository.vpg.create(q_port, q_network)
         if vpg is None:
+            LOG.error("VPG for port {} could not be created.".format(
+                q_port["id"]
+            ))
             return
-        repository.vmi.create(q_port, q_network, vpg.name)
+        repository.vmi.create(q_port, q_network)
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_port_postcommit(self, context):
