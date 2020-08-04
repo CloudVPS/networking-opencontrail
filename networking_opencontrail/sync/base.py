@@ -34,9 +34,6 @@ class ResourceSynchronizer(object):
     implemented. It also enforces synchronize() method implementation in all
     children classes.
     """
-    def __init__(self):
-        self.to_create = []
-        self.to_delete = []
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
     def sync_create(self):
@@ -45,8 +42,7 @@ class ResourceSynchronizer(object):
         Call calculate_diff to prepare lists of uuids to be used by
         resource-specific methods called after that.
         """
-        self.calculate_diff()
-        self._create_resources()
+        self._create_resources(self.calculate_create_diff())
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True, delay=5)
     def sync_delete(self):
@@ -55,19 +51,22 @@ class ResourceSynchronizer(object):
         Call calculate_diff to prepare lists of uuids to be used by
         resource-specific methods called after that.
         """
-        self.calculate_diff()
-        self._delete_resources()
+        self._delete_resources(self.calculate_delete_diff())
 
     @abc.abstractmethod
-    def calculate_diff(self):
+    def calculate_create_diff(self):
         pass
 
     @abc.abstractmethod
-    def _create_resources(self):
+    def calculate_delete_diff(self):
         pass
 
     @abc.abstractmethod
-    def _delete_resources(self):
+    def _create_resources(self, to_create):
+        pass
+
+    @abc.abstractmethod
+    def _delete_resources(self, to_delete):
         pass
 
     @property
@@ -90,44 +89,66 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
     child classes to create/delete resources that are out-of-sync.
     """
 
-    def calculate_diff(self):
-        """Calculate Neutron/TF resource diff.
-
-        Use resource-specific methods implemented by child classes to get
-        lists of given resources both from TF and Neutron. Compare the
-        lists and populate to_create and to_delete lists with objects that are
-        out of sync.
-        """
-        tf_resources = self._get_tf_resources()
-        neutron_resources = self._get_neutron_resources()
+    def _get_res_ids(self, tf_resources, neutron_resources):
         neutron_res_ids = set(
             [resource["id"] for resource in neutron_resources]
         )
         tf_res_ids = set([resource.get_uuid() for resource in tf_resources])
+        return neutron_res_ids, tf_res_ids
+
+    def calculate_delete_diff(self):
+        """Calculate Neutron/TF resource diff.
+
+        Use resource-specific methods implemented by child classes to get
+        lists of given resources both from TF and Neutron. Compare the
+        lists and return to_delete lists with objects that are out of sync.
+        """
+        tf_resources = self._get_tf_resources()
+        neutron_resources = self._get_neutron_resources()
+        neutron_res_ids, tf_res_ids = self._get_res_ids(tf_resources,
+                                                        neutron_resources)
 
         res_ids_to_delete = tf_res_ids - neutron_res_ids
-        res_ids_to_create = neutron_res_ids - tf_res_ids
 
-        self.to_delete = [
+        to_delete = [
             resource
             for resource in tf_resources
             if resource.get_uuid() in res_ids_to_delete
             and not self._ignore_non_ntf_resource(resource)
         ]
-        self.to_create = [
+        self._log_diff(neutron_resources, tf_resources, to_delete=to_delete)
+
+        return to_delete
+
+    def calculate_create_diff(self):
+        """Calculate Neutron/TF resource diff.
+
+        Use resource-specific methods implemented by child classes to get
+        lists of given resources both from TF and Neutron. Compare the
+        lists and return to_create with objects that are out of sync.
+        """
+        tf_resources = self._get_tf_resources()
+        neutron_resources = self._get_neutron_resources()
+        neutron_res_ids, tf_res_ids = self._get_res_ids(tf_resources,
+                                                        neutron_resources)
+
+        res_ids_to_create = neutron_res_ids - tf_res_ids
+
+        to_create = [
             resource
             for resource in neutron_resources
             if resource["id"] in res_ids_to_create
             and not self._ignore_neutron_resource(resource)
         ]
+        self._log_diff(neutron_resources, tf_resources, to_create=to_create)
 
-        self._log_diff(neutron_resources, tf_resources)
+        return to_create
 
-    def _create_resources(self):
-        for resource in list(self.to_create):
+    def _create_resources(self, to_create):
+        for resource in list(to_create):
             try:
                 self._create_resource(resource)
-                self.to_create.remove(resource)
+                to_create.remove(resource)
             except Exception:
                 LOG.exception(
                     "Create %s: %s Failed",
@@ -135,11 +156,11 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
                     resource["id"]
                 )
 
-    def _delete_resources(self):
-        for resource in list(self.to_delete):
+    def _delete_resources(self, to_delete):
+        for resource in list(to_delete):
             try:
                 self._delete_resource(resource.get_uuid())
-                self.to_delete.remove(resource)
+                to_delete.remove(resource)
             except Exception:
                 LOG.exception(
                     "Delete %s: %s Failed",
@@ -147,8 +168,14 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
                     resource.get_uuid()
                 )
 
-    def _log_diff(self, neutron_resources, tf_resources):
-        if self.to_create or self.to_delete:
+    def _log_diff(
+        self,
+        neutron_resources,
+        tf_resources,
+        to_create=None,
+        to_delete=None,
+    ):
+        if to_create or to_delete:
             LOG.info(
                 "%ss in Neutron: %s",
                 self.LOG_RES_NAME,
@@ -159,17 +186,17 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
                 self.LOG_RES_NAME,
                 len(tf_resources)
             )
-        if self.to_delete:
+        if to_delete:
             LOG.info(
                 "%ss to delete in TF: %s",
                 self.LOG_RES_NAME,
-                self.to_delete
+                to_delete
             )
-        if self.to_create:
+        if to_create:
             LOG.info(
                 "%ss to create in TF: %s",
                 self.LOG_RES_NAME,
-                self.to_create
+                to_create
             )
 
     def _ignore_neutron_resource(self, resource):

@@ -72,7 +72,8 @@ class NetworkSynchronizerTestCase(base.TestCase):
         ]
 
         synchronizer = NetworkSynchronizer()
-        synchronizer.calculate_diff()
+        to_create = synchronizer.calculate_create_diff()
+        to_delete = synchronizer.calculate_delete_diff()
 
-        self.assertEqual([n_network_2], synchronizer.to_create)
-        self.assertEqual([tf_network_3], synchronizer.to_delete)
+        self.assertEqual([n_network_2], to_create)
+        self.assertEqual([tf_network_3], to_delete)

@@ -87,27 +87,34 @@ class VPGSynchronizer(base.ResourceSynchronizer):
 
     LOG_RES_NAME = "VPG"
 
-    def calculate_diff(self):
+    def calculate_create_diff(self):
+        vpg_names_from_q_data, vpg_names_from_tf_data = \
+            self._load_resource_names()
+        return vpg_names_from_q_data - vpg_names_from_tf_data
+
+    def calculate_delete_diff(self):
+        vpg_names_from_q_data, vpg_names_from_tf_data = \
+            self._load_resource_names()
+        return vpg_names_from_tf_data - vpg_names_from_q_data
+
+    def _load_resource_names(self):
         q_networks = list_q_networks()
         q_ports = list_q_ports()
         vpg_names_from_q_data = \
             resources.vpg.make_names_from_q_data(q_ports, q_networks)
-
         vpgs = repository.tf_client.list_vpgs()
         vpg_names_from_tf_data = self._make_vpg_names_from_tf_data(vpgs)
+        return vpg_names_from_q_data, vpg_names_from_tf_data
 
-        self.to_create = vpg_names_from_q_data - vpg_names_from_tf_data
-        self.to_delete = vpg_names_from_tf_data - vpg_names_from_q_data
-
-    def _create_resources(self):
-        for vpg_name in self.to_create:
+    def _create_resources(self, to_create):
+        for vpg_name in to_create:
             node_name, _ = resources.vpg.unzip_name(vpg_name)
             node = request_node(node_name)
 
             repository.vpg.create_for_node(node)
 
-    def _delete_resources(self):
-        for vpg_name in self.to_delete:
+    def _delete_resources(self, to_delete):
+        for vpg_name in to_delete:
             vpg_uuid = utils.make_uuid(vpg_name)
             repository.tf_client.delete_vpg(uuid=vpg_uuid)
 
@@ -123,21 +130,28 @@ class VMISynchronizer(base.ResourceSynchronizer):
     """
     LOG_RES_NAME = "VMI"
 
-    def calculate_diff(self):
+    def calculate_create_diff(self):
+        vmi_names_from_q_data, vmi_names_from_tf_data = \
+            self._load_resource_names()
+        return vmi_names_from_q_data - vmi_names_from_tf_data
+
+    def calculate_delete_diff(self):
+        vmi_names_from_q_data, vmi_names_from_tf_data = \
+            self._load_resource_names()
+        return vmi_names_from_tf_data - vmi_names_from_q_data
+
+    def _load_resource_names(self):
         q_networks = list_q_networks()
         q_ports = list_q_ports()
         vmi_names_from_q_data = \
             resources.vmi.make_names_from_q_data(q_ports, q_networks)
-
         vmis = [vmi for vmi in repository.tf_client.list_vmis()
                 if not vmi.get_logical_router_back_refs()]
         vmi_names_from_tf_data = self._make_vmi_names_from_tf_data(vmis)
+        return vmi_names_from_q_data, vmi_names_from_tf_data
 
-        self.to_create = vmi_names_from_q_data - vmi_names_from_tf_data
-        self.to_delete = vmi_names_from_tf_data - vmi_names_from_q_data
-
-    def _create_resources(self):
-        vmi_names = self.to_create
+    def _create_resources(self, to_create):
+        vmi_names = to_create
 
         nodes = self._get_vmi_nodes(vmi_names)
 
@@ -162,8 +176,8 @@ class VMISynchronizer(base.ResourceSynchronizer):
                 return None
         return nodes
 
-    def _delete_resources(self):
-        for vmi_name in self.to_delete:
+    def _delete_resources(self, to_delete):
+        for vmi_name in to_delete:
             vmi_uuid = utils.make_uuid(vmi_name)
 
             vmi = repository.tf_client.read_vmi(uuid=vmi_uuid)
