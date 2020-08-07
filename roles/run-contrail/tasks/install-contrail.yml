@@ -1,7 +1,7 @@
 ---
-- name: Set contrail-ansible-deployer path
+- name: Set tf-ansible-deployer path
   set_fact:
-    contrail_deployer_path: "/home/zuul/contrail-ansible-deployer"
+    contrail_deployer_path: "/home/zuul/tf-ansible-deployer"
   when: contrail_deployer_path is undefined
 
 - name: Set ansible log path
@@ -9,12 +9,12 @@
     ansible_log_path: "/var/log/ansible"
   when: ansible_log_path is undefined
 
-- name: Clone contrail-ansible-deployer repository
+- name: Clone tf-ansible-deployer repository
   git:
     clone: yes
     force: yes
     dest: "{{ contrail_deployer_path }}"
-    repo: https://github.com/Juniper/contrail-ansible-deployer.git
+    repo: https://github.com/tungstenfabric/tf-ansible-deployer
     version: master
 
 - name: Update hosts file
@@ -43,23 +43,6 @@
   args:
     executable: /bin/bash
 
-# Contrail ansible deployer issue Workaround
-# Deployer doesn't use become:yes when creating directories for contrail
-- name: Create /etc/contrail directory
-  become: yes
-  file:
-    path: "/etc/contrail"
-    state: directory
-    mode: a=rwx
-
-- name: Create /var/log/contrail directory
-  become: yes
-  file:
-    path: "/var/log/contrail"
-    state: directory
-    mode: a=rw
-# Workaround END
-
 - name: "Create {{ ansible_log_path }} directory"
   become: yes
   file:
@@ -67,19 +50,17 @@
     state: directory
     mode: a=rw
 
-- name: Copy patch for workaround
-  become: yes
-  copy:
-    src: "fix_easy_install.patch"
-    dest: "{{ contrail_deployer_path }}"
+- name: Workaround for pip installation
+  replace:
+    path: "{{ contrail_deployer_path }}/playbooks/configure_instances.yml"
+    regexp: '    - pip'
+    replace: ''
 
-- name: Fix easy_install in contrail ansible deployer (workaround)
-  become: yes
-  shell: |
-    git apply fix_easy_install.patch
-  args:
-    chdir: "{{ contrail_deployer_path }}"
-    executable: /bin/bash
+- name: Workaround for pip installation
+  replace:
+    path: "{{ contrail_deployer_path }}/playbooks/roles/pip/tasks/main.yml"
+    regexp: '    - pip_check\.rc != 0'
+    replace: '    - true'
 
 - name: "[CONTRAIL ANSIBLE DEPLOYER]: configure instances"
   shell: |
@@ -106,3 +87,4 @@
   args:
     chdir: "{{ contrail_deployer_path }}"
     executable: /bin/bash
+

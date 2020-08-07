@@ -1,7 +1,7 @@
 ---
-- name: Set contrail-ansible-deployer path
+- name: Set tf-ansible-deployer path
   set_fact:
-    contrail_deployer_path: "/home/zuul/contrail-ansible-deployer"
+    contrail_deployer_path: "/home/zuul/tf-ansible-deployer"
   when: contrail_deployer_path is undefined
 
 - name: Check if /var/log/contrail directory exists
@@ -22,7 +22,7 @@
     path: "{{ contrail_deployer_path }}"
   register: contrail_deployer
 
-- name: Prepare contrail-ansible-deployer config files for sync
+- name: Prepare tf-ansible-deployer config files for sync
   shell: |
     set -e
     set -x
@@ -32,7 +32,7 @@
     - inventory/hosts
   when: contrail_deployer.stat.exists
 
-- name: Copy contrail-ansible-deployer config files
+- name: Copy tf-ansible-deployer config files
   become: yes
   synchronize:
     src: "{{ contrail_deployer_path }}/config"

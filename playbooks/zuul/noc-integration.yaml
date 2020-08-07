@@ -1,4 +1,18 @@
 - hosts: controller
+  tasks:
+    # This ansible is a workaround for devstack error with installing
+    # uwsgi on CentOS with stable/queens or stable/train branch.
+    # This should be removed as soon as the change
+    # https://review.opendev.org/#/c/736189/ is merged or any other
+    # fix is applied to openstack/devstack.
+    - name: Update Apache file from devstack repository
+      become: yes
+      copy:
+        remote_src: yes
+        src: /home/zuul/src/opendev.org/x/networking-opencontrail/fixed_apache_script
+        dest: /opt/stack/devstack/lib/apache
+
+- hosts: controller
   roles:
     - run-devstack
     - run-contrail
@@ -6,7 +20,14 @@
     - name: Install ius-release
       become: yes
       yum:
-        name: https://centos7.iuscommunity.org/ius-release.rpm
+        name: https://repo.ius.io/ius-release-el7.rpm
+        state: present
+        update_cache: yes
+
+    - name: Install ius-release 2
+      become: yes
+      yum:
+        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
         state: present
         update_cache: yes
 
@@ -23,18 +44,40 @@
 
     - name: Create symlink on Python3
       # Python36 installation don't create Python3 symlink which is used by tox.
-      # Ignore_errors flag is set to yes, in case this is going to change.
       become: yes
       file:
         src: /usr/bin/python3.6
         dest: /usr/bin/python3
         state: link
-      ignore_errors: yes
 
-    - name: Execute noc-integration testing
+    # This workaround allows to replace opencontrail-router service plugin
+    # with proper L3RouterPlugin. After fixing opencontrail-router alias
+    # this task should be removed along with the script file.
+    - name: Add L3 Neutron configuration to configuration
+      script: add_router_to_neutron_conf.py
+      become: yes
+
+    - name: Restart neutron-server
+      service:
+        name: devstack@q-svc
+        state: restarted
+      become: yes
+
+    - name: Wait for Neutron to wake up
+      shell: source /opt/stack/devstack/userrc_early && openstack network list
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+        executable: /bin/bash
+      retries: 20
+      delay: 10
+      register: result
+      until: result.rc == 0
+
+    - name: Execute noc-integration tests
       shell: |
-        export CONTROLLER_IP={{ hostvars['controller'].ansible_default_ipv4.address }}
-        tox -vv -e integration
+        export CONTRAIL_IP={{ hostvars['controller'].ansible_default_ipv4.address }}
+        stestr -c networking_opencontrail/tests/integration/.stestr.conf run --concurrency=1
+      become: yes
       args:
         chdir: "{{ zuul.project.src_dir }}"
         executable: /bin/bash

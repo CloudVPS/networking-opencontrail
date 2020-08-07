@@ -12,7 +12,7 @@
       - libffi-devel
     state: present
 
-# Dirty ugly workaround on contrail-ansible-deployer not using 'become' in playbooks
+# Dirty ugly workaround on tf-ansible-deployer not using 'become' in playbooks
 - name: Create directories for contrail
   shell: |
     set -e
@@ -21,7 +21,7 @@
     sudo mkdir -p /etc/contrail
     sudo chmod 777 /var/log/contrail /etc/contrail
 
-# Contrail Ansible Deployer
+# TunstenFabric Ansible Deployer
 - name: Create ssh key and add to authorized_key for centos user
   shell: |
     set -e
@@ -31,35 +31,23 @@
     chmod 700 ~/.ssh
     chmod 600 ~/.ssh/centos_rsa ~/.ssh/authorized_keys
 
-- name: Clone 'contrail-ansible-deployer' repository
+- name: Clone 'tf-ansible-deployer' repository
   git:
     clone: yes
     force: yes
-    dest: ~/contrail-ansible-deployer
-    repo: https://github.com/Juniper/contrail-ansible-deployer.git
+    dest: "{{ contrail_deployer_path }}"
+    repo: https://github.com/tungstenfabric/tf-ansible-deployer.git
     version: master
 
 - name: Update hosts file
   template:
     src: hosts.j2
-    dest: ~/contrail-ansible-deployer/inventory/hosts
+    dest: "{{ contrail_deployer_path }}/inventory/hosts"
 
 - name: Update instances.yaml file
   template:
     src: instances.yaml.j2
-    dest: ~/contrail-ansible-deployer/config/instances.yaml
-
-- name: Copy patch for workaround
-  copy:
-    src: fix_easy_install.patch
-    dest: ~/contrail-ansible-deployer/
-
-- name: Fix easy_install in contrail ansible deployer (workaround)
-  shell: |
-    git apply fix_easy_install.patch
-  args:
-    chdir: ~/contrail-ansible-deployer/
-    executable: /bin/bash
+    dest: "{{ contrail_deployer_path }}/config/instances.yaml"
 
 - name: Generate ssh key for provisioning other nodes
   openssh_keypair:
@@ -81,10 +69,10 @@
     set -e
     set -x
     export ANSIBLE_HOST_KEY_CHECKING=False
-    cd ~/contrail-ansible-deployer/
+    cd {{ contrail_deployer_path }}/
     ansible-playbook -vv \
                      -e skip_openstack=true \
-                     -e config_file=~/contrail-ansible-deployer/config/instances.yaml \
+                     -e config_file={{ contrail_deployer_path }}/config/instances.yaml \
                      -i inventory/ playbooks/configure_instances.yml
 
 - name: Deploy OpenContrail
@@ -92,10 +80,10 @@
     set -e
     set -x
     export ANSIBLE_HOST_KEY_CHECKING=False
-    cd ~/contrail-ansible-deployer/
+    cd {{ contrail_deployer_path }}/
     ansible-playbook -vv \
                      -e skip_openstack=true \
-                     -e config_file=~/contrail-ansible-deployer/config/instances.yaml \
+                     -e config_file={{ contrail_deployer_path }}/config/instances.yaml \
                      -e '{"CREATE_CONTAINERS":true}' \
                      -e orchestrator=none \
                      -i inventory/ playbooks/install_contrail.yml
