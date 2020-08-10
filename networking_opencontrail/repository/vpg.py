@@ -141,10 +141,3 @@ def create_for_physical_network(node, network_name):
     tf_client.create_vpg(vpg)
 
     return vpg
-
-
-def _delete_vpg(node):
-    vpg_name = resources.vpg.make_name(node)
-    vpg_uuid = make_uuid(vpg_name)
-
-    tf_client.delete_vpg(uuid=vpg_uuid)

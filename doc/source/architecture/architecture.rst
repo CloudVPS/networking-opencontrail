@@ -51,26 +51,8 @@ The precommit phase is reserved to quick calls due to opened transaction in Neut
 
 Mechanism Drivers API is pretty well documented on `OpenStack page`_ and `Neutron wiki`_.
 
-In some situation Tungsten Fabric allocates IP address that are not requested
-from OpenStack, for example on creating subnet TF creates service for DNS&DHCP
-which need an IP. To synchronize IP mapping in Neutron and TF, plugin creates
-a port with this IP. See more in :doc:`dns_port`
-
 .. _OpenStack page: https://docs.openstack.org/neutron/latest/admin/config-ml2.html
 .. _Neutron wiki: https://wiki.openstack.org/wiki/Neutron/ML2#Mechanism_Drivers
-
-Neutron Callback System
-~~~~~~~~~~~~~~~~~~~~~~~
-Mechanism driver doesn't have hooks for security groups. We use Neutron callback system
-to get notifications about changes made to **Security groups** and **Security group rules**.
-
-The handlers for these resources are binded to callback events in
-``networking_opencontrail.ml2.opencontrail_sg_callback.OpenContrailSecurityGroupHandler#subscribe``
-
-Due to fact that both Neutron and Tungsten Fabric tries to create security group
-named ``default``, the security group in Tungsten Fabric is renamed by plugin to ``default-openstack``
-while creating. Then both security groups (``default`` in Neutron and
-``default-openstack`` in Tungsten Fabric) have the same uuid.
 
 Service Plugins
 ~~~~~~~~~~~~~~~

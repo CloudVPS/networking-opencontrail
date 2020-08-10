@@ -23,10 +23,6 @@ contrail_version: master-latest
 # If true, then install networking_bgpvpn plugin with contrail driver
 install_networking_bgpvpn_plugin: false
 
-# If true, integration with Device Manager will be enabled and vRouter
-# encapsulation priorities will be set to 'VXLAN,MPLSoUDP,MPLSoGRE'.
-dm_integration_enabled: false
-
 # If true, password to the created instances for current ansible user
 # will be set to value of instance_password
 change_password: false

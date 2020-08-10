@@ -25,8 +25,6 @@ Manual configuration
 
    * Ensure you have ``ml2`` core plugin enabled.
    * Add ``opencontrail-router`` to ``service_plugins`` list.
-   * Change default ``network_scheduler_driver``.
-     More description in :doc:`architecture/dhcp_scheduler`.
 
    Example:
 

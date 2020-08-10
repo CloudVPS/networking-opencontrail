@@ -19,7 +19,6 @@
     # Enable ML2 plugin
     enable_plugin networking-opencontrail https://git.openstack.org/openstack/networking-opencontrail
     Q_PLUGIN=ml2
-    ML2_L3_PLUGIN=opencontrail-router
     NEUTRON_CREATE_INITIAL_NETWORKS=False
     Q_USE_SECGROUP=True
 
@@ -35,14 +34,6 @@
     type_drivers = local,vlan,gre
     tenant_network_types = local,vlan
     mechanism_drivers = opencontrail
-
-#. If you want to enable integration with Device Manager and set path to
-   topology file, set additional variables like::
-
-     > cat local.conf
-     [[local|localrc]]
-     OPENCONTRAIL_DM_ENABLED=True
-     OPENCONTRAIL_DM_TOPOLOGY=/etc/neutron/topology.yaml
 
 #. Optionally, if you need to use secure SSL connection, specify additional
    configuration variables as below::

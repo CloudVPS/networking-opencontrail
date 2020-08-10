@@ -50,29 +50,6 @@
         dest: /usr/bin/python3
         state: link
 
-    # This workaround allows to replace opencontrail-router service plugin
-    # with proper L3RouterPlugin. After fixing opencontrail-router alias
-    # this task should be removed along with the script file.
-    - name: Add L3 Neutron configuration to configuration
-      script: add_router_to_neutron_conf.py
-      become: yes
-
-    - name: Restart neutron-server
-      service:
-        name: devstack@q-svc
-        state: restarted
-      become: yes
-
-    - name: Wait for Neutron to wake up
-      shell: source /opt/stack/devstack/userrc_early && openstack network list
-      args:
-        chdir: "{{ zuul.project.src_dir }}"
-        executable: /bin/bash
-      retries: 20
-      delay: 10
-      register: result
-      until: result.rc == 0
-
     - name: Execute noc-integration tests
       shell: |
         export CONTRAIL_IP={{ hostvars['controller'].ansible_default_ipv4.address }}

@@ -113,12 +113,6 @@ as a compute, and not installing vRouter on it.
 * ``install_networking_bgpvpn_plugin`` is a boolean value. If set true, it will
   install the neutron_bgpvpn plugin.
 
-Next, there are variable useful if you want to enable integration with Device
-Manager. Note that playbooks don't onboard fabric.
-
-* ``dm_integration_enabled`` is boolean and when set true, DM integration will
-  be enabled and encapsulation priority in vRouter set to required value.
-
 Last variables provide some useful options to configure VMs:
 
 * ``change_password`` is a boolean value. If set true, the password on
@@ -152,10 +146,6 @@ Last variables provide some useful options to configure VMs:
 
     # If true, then install networking_bgpvpn plugin with contrail driver
     install_networking_bgpvpn_plugin: false
-
-    # If true, integration with Device Manager will be enabled and vRouter
-    # encapsulation priorities will be set to 'VXLAN,MPLSoUDP,MPLSoGRE'.
-    dm_integration_enabled: false
 
     # If true, password to the created instances for current ansible user
     # will be set to value of instance_password

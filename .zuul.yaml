@@ -78,7 +78,6 @@
         OPENCONTRAIL_APISERVER_PORT: 8082
         Q_USE_SECGROUP: true
         Q_PLUGIN: ml2
-        ML2_L3_PLUGIN: opencontrail-router
         Q_ML2_TENANT_NETWORK_TYPE: vlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: opencontrail
         NEUTRON_CREATE_INITIAL_NETWORKS: false
@@ -167,7 +166,6 @@
               mechanism_drivers: opencontrail,openvswitch,linuxbridge
             ml2_type_vlan:
               network_vlan_ranges: public:1:1000,vhost:1:1000
-      dm_integration_enabled: false
 
 - job:
     name: noc-integration
@@ -175,10 +173,7 @@
     description: Integration tests between devstack and opencontrail
     run: playbooks/zuul/noc-integration.yaml
     vars:
-      devstack_localrc:
-        OPENCONTRAIL_DM_ENABLED: true
       tox_envlist: integration
-      dm_integration_enabled: true
     post-run: playbooks/zuul/post-integration.yaml
 
 - job:

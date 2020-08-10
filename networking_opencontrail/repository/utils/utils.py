@@ -30,12 +30,6 @@ def request_project(q_object):
     return project
 
 
-def request_network(q_object):
-    network_id = q_object['network_id']
-    network = tf_client.read_network(uuid=network_id)
-    return network
-
-
 def request_node(name):
     node_fq_name = [
         'default-global-system-config',

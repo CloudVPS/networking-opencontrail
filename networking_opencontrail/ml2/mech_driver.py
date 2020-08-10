@@ -19,8 +19,6 @@ from neutron_lib.plugins.ml2 import api
 
 from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
 from networking_opencontrail.common import utils
-from networking_opencontrail.drivers import drv_opencontrail as drv
-from networking_opencontrail.ml2 import opencontrail_sg_callback
 from networking_opencontrail import repository
 from networking_opencontrail.sync import worker
 
@@ -40,8 +38,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
     def initialize(self):
         utils.register_vnc_api_options()
-        tf_driver = drv.OpenContrailDrivers()
-
         repository.initialize()
 
         try:
@@ -50,10 +46,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
             LOG.error(
                 "Error while connecting to Contrail."
                 "Check APISERVER config section.")
-
-        self.drv = tf_driver
-        self.sg_handler = (
-            opencontrail_sg_callback.OpenContrailSecurityGroupHandler(self))
 
         LOG.info("Initialization of networking-opencontrail plugin: COMPLETE")
 
@@ -135,54 +127,6 @@ class OpenContrailMechDriver(api.MechanismDriver):
 
         repository.vmi.delete(q_port, q_network, context._plugin_context)
         repository.vpg.delete(q_port, q_network)
-
-    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
-    def create_security_group(self, context, sg):
-        """Create a Security Group in OpenContrail."""
-        # vnc_openstack does not allow to create default security group
-        if sg.get('name') == 'default':
-            sg['name'] = 'default-openstack'
-            sg['description'] = 'default-openstack security group'
-        sec_g = {'security_group': sg}
-        try:
-            self.drv.create_security_group(context, sec_g)
-        except Exception:
-            LOG.exception('Failed to create Security Group %s' % sg)
-
-    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
-    def delete_security_group(self, context, sg):
-        """Delete a Security Group from OpenContrail."""
-        sg_id = sg.get('id')
-        try:
-            self.drv.delete_security_group(context, sg_id)
-        except Exception:
-            LOG.exception('Failed to delete Security Group %s' % sg_id)
-
-    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
-    def update_security_group(self, context, sg_id, sg):
-        """Update a Security Group in OpenContrail."""
-        sec_g = {'security_group': sg}
-        try:
-            self.drv.update_security_group(context, sg_id, sec_g)
-        except Exception:
-            LOG.exception('Failed to update Security Group %s' % sg_id)
-
-    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
-    def create_security_group_rule(self, context, sgr):
-        """Create a Security Group Rule in OpenContrail."""
-        sgr_r = {'security_group_rule': sgr}
-        try:
-            self.drv.create_security_group_rule(context, sgr_r)
-        except Exception:
-            LOG.exception('Failed to create Security Group rule %s' % sgr)
-
-    @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
-    def delete_security_group_rule(self, context, sgr_id):
-        """Delete a Security Group Rule from OpenContrail."""
-        try:
-            self.drv.delete_security_group_rule(context, sgr_id)
-        except Exception:
-            LOG.exception('Failed to delete Security Group rule %s' % sgr_id)
 
     def get_workers(self):
         return [
