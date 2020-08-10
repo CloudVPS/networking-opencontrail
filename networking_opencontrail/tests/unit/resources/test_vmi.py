@@ -61,11 +61,17 @@ class VMIResourceTestCase(base.TestCase):
         node_name = "compute-node"
         network = vnc_api.VirtualNetwork(name="test-net", parent_obj=project)
         network.set_uuid("test-net-id")
+        s_name = 'dGVzdC1uZXQtaWQ='
+        s_node_name = 'Y29tcHV0ZS1ub2Rl'
+        vmi_name = "vmi#{name}#{node_name}".format(
+            name=s_name,
+            node_name=s_node_name,
+        )
 
         vmi = create(project, network, node_name, 5)
 
-        self.assertEqual(vmi.name, "vmi#test-net-id#compute-node")
-        self.assertEqual(vmi.uuid, "e208b554-1147-38d3-870e-92a22dab524c")
+        self.assertEqual(vmi.name, vmi_name)
+        self.assertEqual(vmi.uuid, "d1902cf5-1714-3522-837a-3065c3c49e6d")
         self.assertEqual(vmi.parent_name, project.name)
         self.assertEqual(
             vmi.virtual_machine_interface_properties.sub_interface_vlan_tag, 5

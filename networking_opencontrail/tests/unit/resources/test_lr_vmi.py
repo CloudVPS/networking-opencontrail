@@ -28,10 +28,16 @@ class LRVMIResourceTestCase(base.TestCase):
         network.set_uuid('test-net-id')
         router_name = 'test-router'
         port_id = 'port-uuid'
+        net = 'dGVzdC1uZXQ='
+        router = 'dGVzdC1yb3V0ZXI='
+        expected_vmi_name = 'vmi#{net}#{router}'.format(
+            net=net,
+            router=router,
+        )
 
         vmi = create(port_id, project, network, router_name)
 
-        self.assertEqual(vmi.name, 'vmi#test-net#test-router')
+        self.assertEqual(vmi.name, expected_vmi_name)
         self.assertEqual(vmi.uuid, 'port-uuid')
         self.assertEqual(vmi.parent_name, project.name)
         self.assertEqual(len(vmi.virtual_network_refs), 1)

@@ -12,22 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-from vnc_api import vnc_api
+import ddt
 
+from networking_opencontrail.tests import base
+
+from networking_opencontrail.resources.utils import destandardize_name
 from networking_opencontrail.resources.utils import standardize_name
 
 
-def create(port_id, project, network, router_name):
-    name = make_name(network.name, router_name)
-    vmi = vnc_api.VirtualMachineInterface(name=name, parent_obj=project)
-    vmi.set_uuid(port_id)
+@ddt.ddt
+class UtilsResourceTestCase(base.TestCase):
+    def test_standarize_name(self):
+        test_name = "test-name-with-#-1"
+        s_test_name = standardize_name(test_name)
 
-    vmi.set_virtual_network(network)
-
-    return vmi
-
-
-def make_name(network_name, router_name):
-    network = standardize_name(network_name)
-    router = standardize_name(router_name)
-    return 'vmi#{}#{}'.format(network, router)
+        self.assertEqual(destandardize_name(s_test_name), "test-name-with-#-1")

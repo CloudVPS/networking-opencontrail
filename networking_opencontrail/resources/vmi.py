@@ -15,8 +15,10 @@
 from neutron_lib import constants
 from vnc_api import vnc_api
 
+from networking_opencontrail.resources.utils import destandardize_name
 from networking_opencontrail.resources.utils import first
 from networking_opencontrail.resources.utils import make_uuid
+from networking_opencontrail.resources.utils import standardize_name
 
 
 REQUIRED_PORT_FIELDS = [
@@ -59,12 +61,18 @@ def validate(q_port, q_network):
 
 
 def make_name(network_uuid, node_name):
-    vmi_name = "vmi#{}#{}".format(network_uuid, node_name)
+    vmi_name = "vmi#{network_uuid}#{node_name}".format(
+        network_uuid=standardize_name(network_uuid),
+        node_name=standardize_name(node_name)
+        )
     return vmi_name
 
 
 def unzip_name(vmi_name):
     _, network_uuid, node_name = vmi_name.split('#')
+    network_uuid = destandardize_name(network_uuid)
+    node_name = destandardize_name(node_name)
+
     return network_uuid, node_name
 
 

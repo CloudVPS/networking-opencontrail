@@ -38,13 +38,20 @@ class VPGResourceTestCase(base.TestCase):
 
     def test_make_name(self):
         vpg_name = make_name('test-node.novalocal')
+        standarized_name = 'dGVzdC1ub2RlLm5vdmFsb2NhbA=='
 
-        self.assertEqual(vpg_name, 'vpg#test-node.novalocal')
+        self.assertEqual(vpg_name, 'vpg#{}'.format(standarized_name))
 
     def test_make_name_with_network(self):
         vpg_name = make_name('test-node.novalocal', 'tenant')
+        name = 'dGVzdC1ub2RlLm5vdmFsb2NhbA=='
+        network_name = 'dGVuYW50'
+        expected_vpg_name = 'vpg#{name}#{network_name}'.format(
+            name=name,
+            network_name=network_name,
+        )
 
-        self.assertEqual(vpg_name, 'vpg#test-node.novalocal#tenant')
+        self.assertEqual(vpg_name, expected_vpg_name)
 
     def test_unzip_name(self):
         expected_node_name = 'my-n0de_'

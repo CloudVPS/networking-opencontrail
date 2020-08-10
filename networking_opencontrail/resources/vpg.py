@@ -16,8 +16,10 @@
 from oslo_log import log as logging
 from vnc_api import vnc_api
 
+from networking_opencontrail.resources.utils import destandardize_name
 from networking_opencontrail.resources.utils import first
 from networking_opencontrail.resources.utils import make_uuid
+from networking_opencontrail.resources.utils import standardize_name
 from networking_opencontrail.resources.vmi import validate
 
 
@@ -36,18 +38,25 @@ def create(node, fabric, network_name=None):
     return vpg
 
 
-def make_name(node, network=None):
+def make_name(node_name, network_name=None):
     """Generate VPG name based on provided strings"""
-    elements = ('vpg', node, network) if network else ('vpg', node)
-    name = '#'.join(elements)
+    node = standardize_name(node_name)
+    if network_name:
+        network = standardize_name(network_name)
+        elements = ('vpg', node, network)
+    else:
+        elements = ('vpg', node)
 
+    name = '#'.join(elements)
     return name
 
 
 def unzip_name(vpg_name):
     elements = vpg_name.split('#')
-    node_name = elements[1]
-    network_name = elements[2] if len(elements) == 3 else None
+    node_name = destandardize_name(elements[1])
+    network_name = None
+    if len(elements) == 3:
+        network_name = destandardize_name(elements[2])
 
     return node_name, network_name
 

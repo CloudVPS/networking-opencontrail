@@ -12,7 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+
+from base64 import b64decode
+from base64 import b64encode
 import uuid
+
 
 sriov_compute = 'sriov-compute'
 ovs_compute = 'ovs-compute'
@@ -31,3 +35,20 @@ def first(iterable, condition=lambda x: True, default=None):
 
 def make_uuid(name):
     return str(uuid.uuid3(uuid.NAMESPACE_DNS, str(name)))
+
+
+def standardize_name(name):
+    """Standardize name to allow full charset available in OpenStack.
+
+    Code logic relies on some special characters in the resource's name.
+    """
+    encoded = name.encode('ascii')
+    standardized = b64encode(encoded)
+    return standardized.decode('ascii')
+
+
+def destandardize_name(name):
+    """Destandardize previously encoded name."""
+    encoded = name.encode('ascii')
+    destandardized = b64decode(encoded)
+    return destandardized.decode('ascii')
