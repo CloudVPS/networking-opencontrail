@@ -21,7 +21,7 @@ from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import six
 
-from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
+from networking_opencontrail.constants import NTF_SYNC_LOCK_NAME
 
 LOG = logging.getLogger(__name__)
 

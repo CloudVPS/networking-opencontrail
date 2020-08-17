@@ -17,8 +17,8 @@ from oslo_log import log as logging
 
 from neutron_lib.plugins.ml2 import api
 
-from networking_opencontrail.common.constants import NTF_SYNC_LOCK_NAME
-from networking_opencontrail.common import utils
+from networking_opencontrail.constants import NTF_SYNC_LOCK_NAME
+from networking_opencontrail import options
 from networking_opencontrail import repository
 from networking_opencontrail.sync import worker
 
@@ -37,7 +37,7 @@ class OpenContrailMechDriver(api.MechanismDriver):
     """
 
     def initialize(self):
-        utils.register_vnc_api_options()
+        options.register_vnc_api_options()
         repository.initialize()
 
         try:

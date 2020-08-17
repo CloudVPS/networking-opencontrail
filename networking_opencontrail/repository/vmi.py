@@ -16,13 +16,13 @@ import logging
 
 from neutron_lib.plugins import directory
 
-from networking_opencontrail.common import utils
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_node
 from networking_opencontrail.repository.utils.utils import request_project
 from networking_opencontrail import resources
+from networking_opencontrail.resources import utils
 
 LOG = logging.getLogger(__name__)
 

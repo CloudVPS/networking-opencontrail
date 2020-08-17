@@ -16,7 +16,7 @@ from functools import wraps
 
 from requests.exceptions import ConnectionError
 
-from networking_opencontrail.common.utils import register_vnc_api_options
+from networking_opencontrail.options import register_vnc_api_options
 from networking_opencontrail.repository.utils.client import tf_client
 
 

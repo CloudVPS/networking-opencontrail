@@ -15,8 +15,8 @@
 from neutron_lib import constants
 from vnc_api import vnc_api
 
-from networking_opencontrail.common import utils
 from networking_opencontrail.resources.utils import first
+from networking_opencontrail.resources.utils import make_uuid
 
 
 REQUIRED_PORT_FIELDS = [
@@ -29,7 +29,7 @@ REQUIRED_PORT_FIELDS = [
 def create(project, network, node_name, vlan_id):
     name = make_name(network.uuid, node_name)
     vmi = vnc_api.VirtualMachineInterface(name=name, parent_obj=project)
-    vmi.set_uuid(utils.make_uuid(name))
+    vmi.set_uuid(make_uuid(name))
 
     id_perms = vnc_api.IdPermsType(enable=True, creator=project.uuid)
     vmi.set_id_perms(id_perms)

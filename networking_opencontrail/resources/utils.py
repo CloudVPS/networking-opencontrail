@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+import uuid
 
 sriov_compute = 'sriov-compute'
 ovs_compute = 'ovs-compute'
@@ -23,14 +24,10 @@ def is_sriov_node(node):
     return node.node_type == sriov_compute
 
 
-def is_ovs_port(node):
-    """Determine if node uses ovs data ports.
-
-    Both ovs-compute and baremetal NodeType match this.
-    """
-    return node.node_type in (baremetal, ovs_compute)
-
-
 def first(iterable, condition=lambda x: True, default=None):
     return next(
         (x for x in iterable if condition(x)), default)
+
+
+def make_uuid(name):
+    return str(uuid.uuid3(uuid.NAMESPACE_DNS, str(name)))

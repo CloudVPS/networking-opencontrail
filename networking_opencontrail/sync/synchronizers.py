@@ -18,12 +18,12 @@ from neutron_lib.plugins import constants as plugin_constants
 from neutron_lib.plugins import directory
 from oslo_log import log as logging
 
-from networking_opencontrail.common import utils
 from networking_opencontrail.l3.service_provider import validate_flavor
 from networking_opencontrail import repository
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_node
 from networking_opencontrail import resources
+from networking_opencontrail.resources import utils
 from networking_opencontrail.sync import base
 
 LOG = logging.getLogger(__name__)
@@ -218,7 +218,7 @@ class VMISynchronizer(base.ResourceSynchronizer):
             LOG.error("Couldn't find node %s for VMI %s", node_name, vmi_name)
             return
 
-        if resources.utils.is_sriov_node(node):
+        if utils.is_sriov_node(node):
             physical_network = q_network[repository.vpg.PHYSICAL_NETWORK]
             vpg_name = resources.vpg.make_name(node_name, physical_network)
         else:

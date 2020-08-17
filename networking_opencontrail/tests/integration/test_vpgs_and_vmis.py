@@ -15,8 +15,8 @@
 
 import ddt
 
-from networking_opencontrail.common import utils
 from networking_opencontrail import resources
+from networking_opencontrail.resources import utils
 from networking_opencontrail.tests.base import FabricTestCase
 
 

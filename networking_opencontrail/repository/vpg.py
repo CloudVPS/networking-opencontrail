@@ -15,12 +15,12 @@
 
 from oslo_log import log as logging
 
-from networking_opencontrail.common.utils import make_uuid
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils import utils
 from networking_opencontrail import resources
+from networking_opencontrail.resources.utils import make_uuid
 
 
 LOG = logging.getLogger(__name__)

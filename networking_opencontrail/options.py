@@ -12,12 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import requests
-import uuid
-
 from oslo_config import cfg
 
-from networking_opencontrail.common import constants
+from networking_opencontrail import constants
 
 vnc_opts = [
     cfg.StrOpt(
@@ -64,27 +61,3 @@ vnc_opts = [
 def register_vnc_api_options():
     """Register Contrail Neutron core plugin configuration flags"""
     cfg.CONF.register_opts(vnc_opts, 'APISERVER')
-
-
-def vnc_api_is_authenticated():
-    """Determines if the VNC API needs credentials.
-
-    :returns: True if credentials are needed, False otherwise
-    """
-    url = "%s://%s:%s/aaa-mode" % (
-        'https' if cfg.CONF.APISERVER.use_ssl else 'http',
-        cfg.CONF.APISERVER.api_server_ip,
-        cfg.CONF.APISERVER.api_server_port
-    )
-    response = requests.get(url)
-
-    if response.status_code == requests.codes.ok:
-        return False
-    elif response.status_code == requests.codes.unauthorized:
-        return True
-    else:
-        response.raise_for_status()
-
-
-def make_uuid(name):
-    return str(uuid.uuid3(uuid.NAMESPACE_DNS, str(name)))

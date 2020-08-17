@@ -12,13 +12,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 from retrying import retry
+from vnc_api import vnc_api
 
-from networking_opencontrail.common import utils
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail import resources
+from networking_opencontrail.resources import utils
 from networking_opencontrail.tests.base import FabricTestCase
-
-from vnc_api import vnc_api
 
 from networking_opencontrail.tests.integration.test_logical_routers \
     import TestLogicalRouterBase

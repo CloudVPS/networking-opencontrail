@@ -13,11 +13,11 @@
 #    under the License.
 #
 
-from networking_opencontrail.common import utils
 from oslo_log import log as logging
 from vnc_api import vnc_api
 
 from networking_opencontrail.resources.utils import first
+from networking_opencontrail.resources.utils import make_uuid
 from networking_opencontrail.resources.vmi import validate
 
 
@@ -30,7 +30,7 @@ def create(node, fabric, network_name=None):
     vpg = vnc_api.VirtualPortGroup(
         name=name, parent_obj=fabric, id_perms=id_perms)
 
-    vpg_uuid = utils.make_uuid(vpg.name)
+    vpg_uuid = make_uuid(vpg.name)
     vpg.set_uuid(vpg_uuid)
 
     return vpg
