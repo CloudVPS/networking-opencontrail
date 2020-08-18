@@ -16,7 +16,6 @@
 import abc
 
 from neutron_lib import context
-from neutron_lib.plugins import directory
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import six
@@ -68,10 +67,6 @@ class ResourceSynchronizer(object):
     @abc.abstractmethod
     def _delete_resources(self, to_delete):
         pass
-
-    @property
-    def _core_plugin(self):
-        return directory.get_plugin()
 
     @property
     def _context(self):

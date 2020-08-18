@@ -18,13 +18,13 @@ from neutron_lib.callbacks import events
 from neutron_lib.callbacks import registry
 from neutron_lib.callbacks import resources
 from neutron_lib import constants as q_const
-from neutron_lib.plugins import constants as plugin_constants
-from neutron_lib.plugins import directory
+
 from oslo_concurrency import lockutils
 from oslo_log import helpers as log_helpers
 from oslo_log import log as logging
 
 from networking_opencontrail.constants import NTF_SYNC_LOCK_NAME
+from networking_opencontrail.neutron import neutron_client
 from networking_opencontrail import repository
 
 LOG = logging.getLogger(__name__)
@@ -42,20 +42,9 @@ def validate_flavor(provider_name, router, context):
     if flavor_id is q_const.ATTR_NOT_SPECIFIED:
         return False
 
-    flavor_plugin = directory.get_plugin(plugin_constants.FLAVORS)
-    provider = flavor_plugin.get_flavor_next_provider(
-        context, flavor_id)[0]
+    provider = neutron_client.get_provider(context, flavor_id)
+
     return str(provider['driver']) == provider_name
-
-
-def get_port(context, port_id):
-    core_plugin = directory.get_plugin()
-    return core_plugin.get_port(context, port_id)
-
-
-def get_router(context, router_id):
-    router_plugin = directory.get_plugin(plugin_constants.L3)
-    return router_plugin.get_router(context, router_id)
 
 
 @registry.has_registry_receivers
@@ -116,7 +105,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
         if not self.owns_router(context, router_id):
             LOG.debug('Skipping router not managed by TF (%s)', router_id)
             return
-        router = get_router(context, router_id)
+        router = neutron_client.get_router(context, router_id)
         repository.router.create(router)
 
     @registry.receives(resources.ROUTER_INTERFACE, [events.BEFORE_CREATE])
@@ -158,7 +147,7 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
         """
         context = kwargs['context']
         port_id = kwargs['port_id']
-        port = get_port(context, port_id)
+        port = neutron_client.get_port(context, port_id)
         if port['device_owner'] != 'network:router_interface':
             return
         router_id = port['device_id']
@@ -181,12 +170,12 @@ class TFL3ServiceProvider(base.L3ServiceProvider):
         """
         context = kwargs['context']
         port_id = kwargs['port_id']
-        port = get_port(context, port_id)
+        port = neutron_client.get_port(context, port_id)
         if port['device_owner'] != 'network:router_interface':
             return
         router_id = port['device_id']
         if not self.owns_router(context, router_id):
             LOG.debug('Skipping router not managed by TF (%s)', router_id)
             return
-        router = get_router(context, router_id)
+        router = neutron_client.get_router(context, router_id)
         repository.router.add_interface(router, port)

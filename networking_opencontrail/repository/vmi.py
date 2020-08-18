@@ -14,8 +14,7 @@
 #
 import logging
 
-from neutron_lib.plugins import directory
-
+from networking_opencontrail.neutron import neutron_client
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
 from networking_opencontrail.repository.utils import tagger
@@ -142,9 +141,11 @@ def _vmi_should_exist(q_port, q_network, context):
         'network_id': [q_network['id']],
         'binding:host_id': [q_port['binding:host_id']]
     }
-    vmi_ports = directory.get_plugin().get_ports(context,
-                                                 fields=REQUIRED_PORT_FIELDS,
-                                                 filters=port_filters)
+    vmi_ports = neutron_client.list_ports(
+        context,
+        fields=REQUIRED_PORT_FIELDS,
+        filters=port_filters,
+    )
 
     return any(_is_managed_by_tf(vmi_port, q_network)
                for vmi_port in vmi_ports)

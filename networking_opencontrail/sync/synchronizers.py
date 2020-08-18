@@ -13,12 +13,10 @@
 #    under the License.
 #
 
-from neutron_lib import context
-from neutron_lib.plugins import constants as plugin_constants
-from neutron_lib.plugins import directory
 from oslo_log import log as logging
 
 from networking_opencontrail.l3.service_provider import validate_flavor
+from networking_opencontrail.neutron import neutron_client
 from networking_opencontrail import repository
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils import tagger
@@ -32,28 +30,6 @@ L3_SERVICE_PROVIDER_NAME = \
     'networking_opencontrail.l3.service_provider.TFL3ServiceProvider'
 
 
-def list_q_ports():
-    core_plugin = directory.get_plugin()
-    admin_context = context.get_admin_context()
-    q_ports = core_plugin.get_ports(admin_context)
-    return q_ports
-
-
-def list_q_networks():
-    core_plugin = directory.get_plugin()
-    admin_context = context.get_admin_context()
-    q_networks = core_plugin.get_networks(admin_context)
-    return q_networks
-
-
-def list_q_router_interfaces():
-    core_plugin = directory.get_plugin()
-    admin_context = context.get_admin_context()
-    filters = {'device_owner': ['network:router_interface']}
-    q_ports = core_plugin.get_ports(admin_context, filters=filters)
-    return q_ports
-
-
 class NetworkSynchronizer(base.OneToOneResourceSynchronizer):
     """A Network Synchronizer class.
 
@@ -65,7 +41,7 @@ class NetworkSynchronizer(base.OneToOneResourceSynchronizer):
         return repository.tf_client.list_networks()
 
     def _get_neutron_resources(self):
-        return self._core_plugin.get_networks(self._context)
+        return neutron_client.list_networks(self._context)
 
     def _create_resource(self, resource):
         repository.network.create(resource)
@@ -99,8 +75,8 @@ class VPGSynchronizer(base.ResourceSynchronizer):
         return vpg_names_from_tf_data - vpg_names_from_q_data
 
     def _load_resource_names(self):
-        q_networks = list_q_networks()
-        q_ports = list_q_ports()
+        q_networks = neutron_client.list_networks(self._context)
+        q_ports = neutron_client.list_ports(self._context)
         vpg_names_from_q_data = \
             resources.vpg.make_names_from_q_data(q_ports, q_networks)
         vpgs = repository.tf_client.list_vpgs()
@@ -146,8 +122,8 @@ class VMISynchronizer(base.ResourceSynchronizer):
         return vmi_names_from_tf_data - vmi_names_from_q_data
 
     def _load_resource_names(self):
-        q_networks = list_q_networks()
-        q_ports = list_q_ports()
+        q_networks = neutron_client.list_networks(self._context)
+        q_ports = neutron_client.list_ports(self._context)
         vmi_names_from_q_data = \
             resources.vmi.make_names_from_q_data(q_ports, q_networks)
         vmis = [vmi for vmi in repository.tf_client.list_vmis()
@@ -207,7 +183,7 @@ class VMISynchronizer(base.ResourceSynchronizer):
             LOG.error("Couldn't find project for VMI %s", vmi_name)
             return
 
-        q_networks = self._core_plugin.get_networks(self._context)
+        q_networks = neutron_client.list_networks(self._context)
         q_network = next((q_network for q_network in q_networks
                           if q_network['id'] == network_uuid), None)
         if not q_network:
@@ -273,7 +249,7 @@ class SubnetSynchronizer(base.OneToOneResourceSynchronizer):
         return subnets
 
     def _get_neutron_resources(self):
-        return self._core_plugin.get_subnets(self._context)
+        return neutron_client.list_subnets(self._context)
 
     def _create_resource(self, resource):
         repository.subnet.create(resource)
@@ -293,8 +269,7 @@ class RouterSynchronizer(base.OneToOneResourceSynchronizer):
         return repository.router.list_all()
 
     def _get_neutron_resources(self):
-        router_plugin = directory.get_plugin(plugin_constants.L3)
-        return router_plugin.get_routers(self._context)
+        return neutron_client.list_routers(self._context)
 
     def _create_resource(self, resource):
         repository.router.create(resource)
@@ -321,7 +296,7 @@ class RouterInterfaceSynchronizer(base.OneToOneResourceSynchronizer):
         return repository.tf_client.list_vmis()
 
     def _get_neutron_resources(self):
-        return list_q_router_interfaces()
+        return neutron_client.list_router_interfaces(self._context)
 
     def _create_resource(self, resource):
         router_id = resource['device_id']
@@ -337,7 +312,9 @@ class RouterInterfaceSynchronizer(base.OneToOneResourceSynchronizer):
                 or not resource.get_logical_router_back_refs())
 
     def _ignore_neutron_resource(self, resource):
-        router_plugin = directory.get_plugin(plugin_constants.L3)
-        router = router_plugin.get_router(self._context, resource['device_id'])
+        router = neutron_client.get_router(
+            self._context,
+            resource['device_id'],
+        )
         return not validate_flavor(
             L3_SERVICE_PROVIDER_NAME, router, self._context)
