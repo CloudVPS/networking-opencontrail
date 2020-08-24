@@ -109,14 +109,15 @@ def create_for_node(node):
         LOG.info("VPG %s already exists", vpg.display_name)
         return vpg
 
-    physical_interfaces = utils.request_physical_interfaces_from_node(node)
-
     fabric = utils.request_fabric_from_node(node)
     if not fabric:
         raise Exception("Couldn't find fabric for VPG")
 
-    vpg = resources.vpg.create(node, physical_interfaces, fabric)
+    vpg = resources.vpg.create(node, fabric)
     tf_client.create_vpg(vpg)
+
+    _add_physical_interfaces(vpg, node)
+    tf_client.update_vpg(vpg)
 
     return vpg
 
@@ -130,14 +131,22 @@ def create_for_physical_network(node, network_name):
         LOG.info("VPG %s already exists", vpg.display_name)
         return vpg
 
-    physical_interfaces = utils.request_physical_interfaces_from_node(
-        node, network_name)
-
     fabric = utils.request_fabric_from_node(node)
     if not fabric:
         raise Exception("Couldn't find fabric for VPG")
 
-    vpg = resources.vpg.create(node, physical_interfaces, fabric, network_name)
+    vpg = resources.vpg.create(node, fabric, network_name)
     tf_client.create_vpg(vpg)
 
+    _add_physical_interfaces(vpg, node, network_name)
+    tf_client.update_vpg(vpg)
+
     return vpg
+
+
+def _add_physical_interfaces(vpg, node, network_name=None):
+    physical_interfaces = utils.request_physical_interfaces_from_node(
+        node, network_name)
+
+    for physical_interface in physical_interfaces:
+        vpg.add_physical_interface(ref_obj=physical_interface)

@@ -108,10 +108,14 @@ class VPGSynchronizer(base.ResourceSynchronizer):
 
     def _create_resources(self, to_create):
         for vpg_name in to_create:
-            node_name, _ = resources.vpg.unzip_name(vpg_name)
+            node_name, network_name = resources.vpg.unzip_name(vpg_name)
+
             node = request_node(node_name)
 
-            repository.vpg.create_for_node(node)
+            if network_name is None:
+                repository.vpg.create_for_node(node)
+            else:
+                repository.vpg.create_for_physical_network(node, network_name)
 
     def _delete_resources(self, to_delete):
         for vpg_name in to_delete:

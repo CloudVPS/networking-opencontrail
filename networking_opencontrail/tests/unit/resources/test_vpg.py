@@ -27,30 +27,14 @@ class VPGResourceTestCase(base.TestCase):
         domain = vnc_api.Domain(name='test-domain')
         fabric = vnc_api.Fabric(name='test-fabric', parent_obj=domain)
         node = vnc_api.Node(name='test-node', parent_obj=domain)
-        pr = vnc_api.PhysicalRouter(name='test-pr', parent_obj=domain)
-        physical_interfaces = [
-            vnc_api.PhysicalInterface(name='test-pi-1', parent_obj=pr),
-            vnc_api.PhysicalInterface(name='test-pi-2', parent_obj=pr),
-            vnc_api.PhysicalInterface(name='test-pi-3', parent_obj=pr),
-        ]
 
         vpg = create(
             node=node,
-            physical_interfaces=physical_interfaces,
             fabric=fabric
         )
         self.assertEqual(vpg.name, make_name(node.name))
         self.assertEqual(vpg.parent_name, fabric.name)
         self.assertEqual(vpg.id_perms, vnc_api.IdPermsType(enable=True))
-
-        expected_physical_interface_refs = []
-        for physical_interface in physical_interfaces:
-            expected_physical_interface_refs.append(
-                {'to': physical_interface.fq_name, 'attr': None}
-            )
-
-        self.assertEqual(
-            vpg.physical_interface_refs, expected_physical_interface_refs)
 
     def test_make_name(self):
         vpg_name = make_name('test-node.novalocal')

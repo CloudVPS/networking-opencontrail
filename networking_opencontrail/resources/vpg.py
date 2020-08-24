@@ -24,7 +24,7 @@ from networking_opencontrail.resources.vmi import validate
 LOG = logging.getLogger(__name__)
 
 
-def create(node, physical_interfaces, fabric, network_name=None):
+def create(node, fabric, network_name=None):
     name = make_name(node.name, network_name)
     id_perms = vnc_api.IdPermsType(enable=True)
     vpg = vnc_api.VirtualPortGroup(
@@ -32,9 +32,6 @@ def create(node, physical_interfaces, fabric, network_name=None):
 
     vpg_uuid = utils.make_uuid(vpg.name)
     vpg.set_uuid(vpg_uuid)
-
-    for physical_interface in physical_interfaces:
-        vpg.add_physical_interface(ref_obj=physical_interface)
 
     return vpg
 
