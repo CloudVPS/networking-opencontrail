@@ -21,6 +21,7 @@ from networking_opencontrail.repository.utils.initialize import reconnect
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_node
 from networking_opencontrail.repository.utils.utils import request_project
+from networking_opencontrail.repository.vpg import PHYSICAL_NETWORK
 from networking_opencontrail import resources
 from networking_opencontrail.resources import utils
 
@@ -56,7 +57,7 @@ def create(q_port, q_network):
     node = request_node(node_name)
 
     if resources.utils.is_sriov_node(node):
-        physical_network = q_network[resources.vpg.PHYSICAL_NETWORK]
+        physical_network = q_network[PHYSICAL_NETWORK]
         vpg_name = resources.vpg.make_name(node_name, physical_network)
     else:
         vpg_name = resources.vpg.make_name(node_name)
