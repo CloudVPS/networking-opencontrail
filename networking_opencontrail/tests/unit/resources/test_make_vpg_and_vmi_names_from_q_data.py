@@ -267,6 +267,7 @@ class MakeVPGAndVMINamesFromQDataTestCase(base.TestCase):
                 PORT_NETWORK_1_NODE_2['binding:host_id']
             ),
         ]
+
         self.assertItemsEqual(vpgs, expected_vpgs)
         self.assertItemsEqual(vmis, expected_vmis)
 
@@ -283,6 +284,7 @@ class MakeVPGAndVMINamesFromQDataTestCase(base.TestCase):
 
         expected_vpgs = []
         expected_vmis = []
+
         self.assertItemsEqual(vpgs, expected_vpgs)
         self.assertItemsEqual(vmis, expected_vmis)
 
@@ -299,6 +301,7 @@ class MakeVPGAndVMINamesFromQDataTestCase(base.TestCase):
 
         expected_vpgs = []
         expected_vmis = []
+
         self.assertItemsEqual(vpgs, expected_vpgs)
         self.assertItemsEqual(vmis, expected_vmis)
 

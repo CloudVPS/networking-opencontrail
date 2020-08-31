@@ -16,6 +16,7 @@
 from oslo_log import log as logging
 from vnc_api import vnc_api
 
+from networking_opencontrail.exceptions import InvalidResource
 from networking_opencontrail.resources.utils import destandardize_name
 from networking_opencontrail.resources.utils import first
 from networking_opencontrail.resources.utils import make_uuid
@@ -104,7 +105,7 @@ def make_names_from_q_data(q_ports, q_networks):
         if q_network:
             try:
                 validate(q_port, q_network)
-            except ValueError:
+            except InvalidResource:
                 continue
 
             node_name = q_port['binding:host_id']

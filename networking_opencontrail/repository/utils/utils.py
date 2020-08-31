@@ -17,6 +17,7 @@ import uuid
 
 from oslo_log import log as logging
 
+from networking_opencontrail.exceptions import ResourceNotFound
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.tagger import is_data_port
 from networking_opencontrail.repository.utils.tagger import is_management_port
@@ -36,6 +37,9 @@ def request_node(name):
         name
     ]
     node = tf_client.read_node(fq_name=node_fq_name)
+    if node is None:
+        raise ResourceNotFound.create('node', name)
+
     return node
 
 
@@ -107,14 +111,20 @@ def request_fabric_from_physical_interface(physical_interface):
 def request_fabric_from_node(node):
     ports = request_ports_from_node(node)
     if not ports:
-        return None
+        raise ResourceNotFound(
+            "No ports attached to node {}".format(node.name))
 
     port = ports[0]
     physical_interfaces = request_physical_interfaces_from_port(port)
     if not physical_interfaces:
-        return None
+        raise ResourceNotFound(
+            "No physical interfaces attached to port {}".format(node.name))
 
     physical_interface = physical_interfaces[0]
     fabric = request_fabric_from_physical_interface(physical_interface)
+
+    if fabric is None:
+        raise ResourceNotFound(
+            "No fabric could be determined for node {}".format(node.name))
 
     return fabric

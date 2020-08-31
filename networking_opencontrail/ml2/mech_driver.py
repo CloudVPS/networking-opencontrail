@@ -18,6 +18,7 @@ from oslo_log import log as logging
 from neutron_lib.plugins.ml2 import api
 
 from networking_opencontrail.constants import NTF_SYNC_LOCK_NAME
+from networking_opencontrail.exceptions import InvalidResource
 from networking_opencontrail import options
 from networking_opencontrail import repository
 from networking_opencontrail.sync import worker
@@ -93,13 +94,11 @@ class OpenContrailMechDriver(api.MechanismDriver):
         q_port = context.current
         q_network = context.network.current
 
-        vpg = repository.vpg.create(q_port, q_network)
-        if vpg is None:
-            LOG.error("VPG for port {} could not be created.".format(
-                q_port["id"]
-            ))
-            return
-        repository.vmi.create(q_port, q_network)
+        try:
+            repository.vpg.create(q_port, q_network)
+            repository.vmi.create(q_port, q_network)
+        except InvalidResource as e:
+            LOG.info("Port ommited by plugin, cause: {}".format(str(e)))
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def update_port_postcommit(self, context):
@@ -108,16 +107,15 @@ class OpenContrailMechDriver(api.MechanismDriver):
         old_q_port = context.original
         q_network = context.network.current
 
-        repository.vmi.delete(old_q_port, q_network, context._plugin_context)
-        repository.vpg.delete(old_q_port, q_network)
+        try:
+            repository.vmi.delete(
+                old_q_port, q_network, context._plugin_context)
+            repository.vpg.delete(old_q_port, q_network)
 
-        vpg = repository.vpg.create(q_port, q_network)
-        if vpg is None:
-            LOG.error("VPG for port {} could not be created.".format(
-                q_port["id"]
-            ))
-            return
-        repository.vmi.create(q_port, q_network)
+            repository.vpg.create(q_port, q_network)
+            repository.vmi.create(q_port, q_network)
+        except InvalidResource as e:
+            LOG.info("Port ommited by plugin, cause: {}".format(str(e)))
 
     @lockutils.synchronized(NTF_SYNC_LOCK_NAME, external=True)
     def delete_port_postcommit(self, context):
@@ -125,8 +123,11 @@ class OpenContrailMechDriver(api.MechanismDriver):
         q_port = context.current
         q_network = context.network.current
 
-        repository.vmi.delete(q_port, q_network, context._plugin_context)
-        repository.vpg.delete(q_port, q_network)
+        try:
+            repository.vmi.delete(q_port, q_network, context._plugin_context)
+            repository.vpg.delete(q_port, q_network)
+        except InvalidResource as e:
+            LOG.info("Port ommited by plugin, cause: {}".format(str(e)))
 
     def get_workers(self):
         return [

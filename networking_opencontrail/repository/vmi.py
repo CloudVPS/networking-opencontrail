@@ -14,6 +14,7 @@
 #
 import logging
 
+from networking_opencontrail.exceptions import InvalidResource
 from networking_opencontrail.neutron import neutron_client
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
@@ -36,12 +37,7 @@ REQUIRED_PORT_FIELDS = [
 
 @reconnect
 def create(q_port, q_network):
-    try:
-        resources.vmi.validate(q_port, q_network)
-    except ValueError as e:
-        LOG.debug("Did not create a VMI for port %s", q_port["id"])
-        LOG.debug(e)
-        return
+    resources.vmi.validate(q_port, q_network)
 
     project = request_project(q_network)
     node_name = q_port['binding:host_id']
@@ -66,12 +62,7 @@ def create(q_port, q_network):
 
 @reconnect
 def delete(q_port, q_network, context):
-    try:
-        resources.vmi.validate(q_port, q_network)
-    except ValueError as e:
-        LOG.debug("Did not delete a VMI for port %s", q_port["id"])
-        LOG.debug(e)
-        return
+    resources.vmi.validate(q_port, q_network)
 
     network_uuid = q_network['id']
     node_name = q_port['binding:host_id']
@@ -132,7 +123,7 @@ def detach_from_vpg(vmi):
 def _is_managed_by_tf(q_port, q_network):
     try:
         resources.vmi.validate(q_port, q_network)
-    except ValueError:
+    except InvalidResource:
         return False
     return True
 

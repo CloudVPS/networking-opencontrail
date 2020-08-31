@@ -14,13 +14,14 @@
 #
 import ddt
 
-from networking_opencontrail.tests import base
 from vnc_api import vnc_api
 
+from networking_opencontrail.exceptions import InvalidResource
 from networking_opencontrail.resources.vmi import create
 from networking_opencontrail.resources.vmi import make_name
 from networking_opencontrail.resources.vmi import unzip_name
 from networking_opencontrail.resources.vmi import validate
+from networking_opencontrail.tests import base
 
 
 PORT_VALID = {
@@ -91,7 +92,7 @@ class VMIResourceTestCase(base.TestCase):
     )
     @ddt.unpack
     def test_validate_error(self, port, network):
-        self.assertRaises(ValueError, validate, port, network)
+        self.assertRaises(InvalidResource, validate, port, network)
 
     def test_validate(self):
         self.assertIsNone(validate(PORT_VALID, NETWORK_VALID))

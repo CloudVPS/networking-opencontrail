@@ -15,6 +15,7 @@
 from neutron_lib import constants
 from vnc_api import vnc_api
 
+from networking_opencontrail.exceptions import InvalidResource
 from networking_opencontrail.resources.utils import destandardize_name
 from networking_opencontrail.resources.utils import first
 from networking_opencontrail.resources.utils import make_uuid
@@ -48,15 +49,15 @@ def create(project, network, node_name, vlan_id):
 
 def validate(q_port, q_network):
     for field in REQUIRED_PORT_FIELDS:
-        if field not in q_port:
-            raise ValueError("No {} field in port".format(field))
+        if not q_port.get(field):
+            raise InvalidResource("No {} field in port".format(field))
 
     if not q_port.get("device_owner", "").startswith(
         constants.DEVICE_OWNER_COMPUTE_PREFIX):
-        raise ValueError("Invalid device_owner field value")
+        raise InvalidResource("Invalid device_owner field value")
 
     if not q_network.get("provider:segmentation_id"):
-        raise ValueError(
+        raise InvalidResource(
             "No VLAN ID set for network {}".format(q_network["name"]))
 
 
@@ -113,7 +114,7 @@ def make_names_from_q_data(q_ports, q_networks):
         if q_network:
             try:
                 validate(q_port, q_network)
-            except ValueError:
+            except InvalidResource:
                 continue
 
             q_port_network_uuid = q_network['id']

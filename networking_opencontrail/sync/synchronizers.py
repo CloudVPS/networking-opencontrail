@@ -96,7 +96,7 @@ class VPGSynchronizer(base.ResourceSynchronizer):
 
     def _delete_resources(self, to_delete):
         for vpg_name in to_delete:
-            vpg_uuid = utils.make_uuid(vpg_name)
+            vpg_uuid = resources.utils.make_uuid(vpg_name)
             repository.tf_client.delete_vpg(uuid=vpg_uuid)
 
     @staticmethod
@@ -159,7 +159,7 @@ class VMISynchronizer(base.ResourceSynchronizer):
 
     def _delete_resources(self, to_delete):
         for vmi_name in to_delete:
-            vmi_uuid = utils.make_uuid(vmi_name)
+            vmi_uuid = resources.utils.make_uuid(vmi_name)
 
             vmi = repository.tf_client.read_vmi(uuid=vmi_uuid)
             if vmi is None:

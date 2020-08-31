@@ -15,6 +15,7 @@
 
 from oslo_log import log as logging
 
+from networking_opencontrail.exceptions import ResourceNotFound
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
 from networking_opencontrail.repository.utils import tagger
@@ -30,15 +31,9 @@ PHYSICAL_NETWORK = 'provider:physical_network'
 
 @reconnect
 def create(q_port, q_network):
-    try:
-        resources.vmi.validate(q_port, q_network)
-    except ValueError as e:
-        LOG.debug("Did not create a VPG for port %s", q_port["id"])
-        LOG.debug(e)
-        return
+    resources.vmi.validate(q_port, q_network)
 
     node = utils.request_node(q_port['binding:host_id'])
-
     if resources.utils.is_sriov_node(node):
         physical_network = q_network[PHYSICAL_NETWORK]
         vpg = create_for_physical_network(node, physical_network)
@@ -52,12 +47,7 @@ def create(q_port, q_network):
 
 @reconnect
 def delete(q_port, q_network):
-    try:
-        resources.vmi.validate(q_port, q_network)
-    except ValueError as e:
-        LOG.debug("Did not delete a VPG for port %s", q_port["id"])
-        LOG.debug(e)
-        return
+    resources.vmi.validate(q_port, q_network)
 
     node = utils.request_node(q_port['binding:host_id'])
     if resources.utils.is_sriov_node(node):
@@ -111,7 +101,7 @@ def create_for_node(node):
 
     fabric = utils.request_fabric_from_node(node)
     if not fabric:
-        raise Exception("Couldn't find fabric for VPG")
+        raise ResourceNotFound("Couldn't find fabric for VPG")
 
     vpg = resources.vpg.create(node, fabric)
     tf_client.create_vpg(vpg)
@@ -133,7 +123,7 @@ def create_for_physical_network(node, network_name):
 
     fabric = utils.request_fabric_from_node(node)
     if not fabric:
-        raise Exception("Couldn't find fabric for VPG")
+        raise ResourceNotFound("Couldn't find fabric for VPG")
 
     vpg = resources.vpg.create(node, fabric, network_name)
     tf_client.create_vpg(vpg)
