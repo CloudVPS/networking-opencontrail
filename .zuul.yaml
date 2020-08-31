@@ -9,7 +9,7 @@
 
 # TODO(kamil_mankowski) python 3 support is dropped due to incompatibility with
 # contrail-api-client. When this works with Py3, enable tests for python3
-# and configure tox envs integration, cover, lower-constraints to use Python 3
+# and configure tox envs integration, cover, lower-constrain\ts to use Python 3
 
 - project:
     templates:
