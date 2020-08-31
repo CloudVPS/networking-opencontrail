@@ -20,6 +20,7 @@ from oslo_log import log as logging
 
 from networking_opencontrail.l3.service_provider import validate_flavor
 from networking_opencontrail import repository
+from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils import tagger
 from networking_opencontrail.repository.utils.utils import request_node
 from networking_opencontrail import resources
@@ -223,6 +224,15 @@ class VMISynchronizer(base.ResourceSynchronizer):
             vpg_name = resources.vpg.make_name(node_name, physical_network)
         else:
             vpg_name = resources.vpg.make_name(node_name)
+
+        vpg_uuid = utils.make_uuid(vpg_name)
+        if tf_client.read_vpg(uuid=vpg_uuid) is None:
+            LOG.warning(
+                "Couldn't find VPG %s for VMI %s. Skipping",
+                vpg_name,
+                vmi_name
+            )
+            return
 
         vlan_id = q_network.get('provider:segmentation_id')
         repository.vmi.create_from_tf_data(
