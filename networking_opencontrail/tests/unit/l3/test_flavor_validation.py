@@ -44,7 +44,7 @@ class L3FlavorValidatorTestCases(test_extensions_base.ExtensionTestCase):
         logging.disable(logging.NOTSET)
 
     @mock.patch(
-        'networking_opencontrail.l3.service_provider.directory.get_plugin')
+        'networking_opencontrail.neutron.neutron_client.directory.get_plugin')
     def test_validate(self, get_plugin):
         get_plugin.return_value = self.fl_plugin
         router = {"flavor_id": self.flavor_id}
@@ -60,7 +60,7 @@ class L3FlavorValidatorTestCases(test_extensions_base.ExtensionTestCase):
     )
     @ddt.unpack
     @mock.patch(
-        'networking_opencontrail.l3.service_provider.directory.get_plugin')
+        'networking_opencontrail.neutron.neutron_client.directory.get_plugin')
     def test_validate_false(self, flavor_id, expected, get_plugin):
         get_plugin.return_value = self.fl_plugin
         router = {"flavor_id": flavor_id}

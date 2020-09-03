@@ -23,7 +23,9 @@ class NetworkSynchronizerTestCase(base.TestCase):
     def setUp(self):
         super(NetworkSynchronizerTestCase, self).setUp()
 
-    @mock.patch("networking_opencontrail.sync.base.directory.get_plugin")
+    @mock.patch(
+        "networking_opencontrail.neutron.neutron_client.directory.get_plugin"
+    )
     @mock.patch("networking_opencontrail.sync.synchronizers.repository")
     def test_calculate_diff(self, repository, core_plugin):
         # Exists both in Neutron and TF config API.

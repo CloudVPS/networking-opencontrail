@@ -17,7 +17,6 @@ from eventlet import event
 from eventlet import greenthread
 
 from neutron_lib import context
-from neutron_lib.plugins import directory
 from neutron_lib import worker
 from oslo_log import log as logging
 
@@ -84,10 +83,6 @@ class TFSyncWorker(worker.BaseWorker):
             synchronizer.sync_create()
         for synchronizer in reversed(self.synchronizers):
             synchronizer.sync_delete()
-
-    @property
-    def _core_plugin(self):
-        return directory.get_plugin()
 
     @property
     def _context(self):
