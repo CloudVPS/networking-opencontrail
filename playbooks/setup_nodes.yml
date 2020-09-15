@@ -22,12 +22,6 @@
   - contrail
   - contrail_deploy
 
-- hosts: contrail_controller:contrail
-  roles:
-  - vrouter_node
-  tags:
-  - contrail
-
 - hosts: controller
   roles:
   - { role: networking_bgpvpn_plugin, when: install_networking_bgpvpn_plugin }
