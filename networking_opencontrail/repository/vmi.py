@@ -19,7 +19,6 @@ from networking_opencontrail.neutron import neutron_client
 from networking_opencontrail.repository.utils.client import tf_client
 from networking_opencontrail.repository.utils.initialize import reconnect
 from networking_opencontrail.repository.utils import tagger
-from networking_opencontrail.repository.utils.utils import request_node
 from networking_opencontrail.repository.utils.utils import request_project
 from networking_opencontrail.repository.vpg import PHYSICAL_NETWORK
 from networking_opencontrail import resources
@@ -49,15 +48,14 @@ def create(q_port, q_network):
     network = tf_client.read_network(uuid=q_network["id"])
     vlan_id = q_network.get("provider:segmentation_id")
 
-    node = request_node(node_name)
-
-    if resources.utils.is_sriov_node(node):
+    if utils.is_sriov_port(q_port):
         physical_network = q_network[PHYSICAL_NETWORK]
         vpg_name = resources.vpg.make_name(node_name, physical_network)
-    else:
-        vpg_name = resources.vpg.make_name(node_name)
+        return create_from_tf_data(
+            project, network, node_name, vlan_id, vpg_name)
 
-    create_from_tf_data(project, network, node_name, vlan_id, vpg_name)
+    vpg_name = resources.vpg.make_name(node_name)
+    return create_from_tf_data(project, network, node_name, vlan_id, vpg_name)
 
 
 @reconnect
@@ -95,7 +93,8 @@ def vmi_exists(network_uuid, node_name):
 
 
 @reconnect
-def create_from_tf_data(project, network, node_name, vlan_id, vpg_name):
+def create_from_tf_data(
+    project, network, node_name, vlan_id, vpg_name):
     vmi = resources.vmi.create(project, network, node_name, vlan_id)
 
     tf_client.create_vmi(vmi)
@@ -105,8 +104,8 @@ def create_from_tf_data(project, network, node_name, vlan_id, vpg_name):
 
 def _attach_to_vpg(vmi, vpg_name):
     vpg_uuid = utils.make_uuid(vpg_name)
-
     vpg = tf_client.read_vpg(uuid=vpg_uuid)
+
     vpg.add_virtual_machine_interface(vmi)
     tf_client.update_vpg(vpg)
 

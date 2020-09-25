@@ -34,7 +34,7 @@ def create(q_port, q_network):
     resources.vmi.validate(q_port, q_network)
 
     node = utils.request_node(q_port['binding:host_id'])
-    if resources.utils.is_sriov_node(node):
+    if resources.utils.is_sriov_port(q_port):
         physical_network = q_network[PHYSICAL_NETWORK]
         vpg = create_for_physical_network(node, physical_network)
 
@@ -50,7 +50,7 @@ def delete(q_port, q_network):
     resources.vmi.validate(q_port, q_network)
 
     node = utils.request_node(q_port['binding:host_id'])
-    if resources.utils.is_sriov_node(node):
+    if resources.utils.is_sriov_port(q_port):
         physical_network = q_network[PHYSICAL_NETWORK]
         vpg = _read_from_node_and_network(node, physical_network)
     else:
@@ -106,7 +106,8 @@ def create_for_node(node):
     vpg = resources.vpg.create(node, fabric)
     tf_client.create_vpg(vpg)
 
-    _add_physical_interfaces(vpg, node)
+    physical_interfaces = request_physical_interfaces(node)
+    add_physical_interfaces(vpg, physical_interfaces)
     tf_client.update_vpg(vpg)
 
     return vpg
@@ -116,6 +117,14 @@ def create_for_node(node):
 def create_for_physical_network(node, network_name):
     """Create a VPG attached to the provided node and physical network."""
     vpg = _read_from_node_and_network(node, network_name)
+    physical_interfaces = request_physical_interfaces(node, network_name)
+    if not physical_interfaces:
+        LOG.info(
+            "No physical interfaces found on {node} for network {network}"
+            " falling back to per node setup"
+            .format(node=node.name, network=network_name))
+
+        return create_for_node(node)
 
     if vpg:
         LOG.info("VPG %s already exists", vpg.display_name)
@@ -128,15 +137,19 @@ def create_for_physical_network(node, network_name):
     vpg = resources.vpg.create(node, fabric, network_name)
     tf_client.create_vpg(vpg)
 
-    _add_physical_interfaces(vpg, node, network_name)
+    add_physical_interfaces(vpg, physical_interfaces)
     tf_client.update_vpg(vpg)
 
     return vpg
 
 
-def _add_physical_interfaces(vpg, node, network_name=None):
+def request_physical_interfaces(node, network_name=None):
     physical_interfaces = utils.request_physical_interfaces_from_node(
         node, network_name)
 
+    return physical_interfaces
+
+
+def add_physical_interfaces(vpg, physical_interfaces):
     for physical_interface in physical_interfaces:
         vpg.add_physical_interface(ref_obj=physical_interface)

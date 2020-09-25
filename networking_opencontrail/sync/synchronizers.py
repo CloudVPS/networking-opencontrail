@@ -195,12 +195,37 @@ class VMISynchronizer(base.ResourceSynchronizer):
             LOG.error("Couldn't find node %s for VMI %s", node_name, vmi_name)
             return
 
-        if utils.is_sriov_node(node):
+        vlan_id = q_network.get('provider:segmentation_id')
+
+        # List of ports is satisfactory, as all of them should be run through
+        # the same interface.
+        matching_ports = neutron_client.list_ports(self._context, filters={
+            "binding:host_id": [node_name],
+            "network_id": [network_uuid]
+        })
+        if utils.is_sriov_port(matching_ports[0]):
             physical_network = q_network[repository.vpg.PHYSICAL_NETWORK]
             vpg_name = resources.vpg.make_name(node_name, physical_network)
-        else:
-            vpg_name = resources.vpg.make_name(node_name)
+            vpg_uuid = utils.make_uuid(vpg_name)
+            if tf_client.read_vpg(uuid=vpg_uuid):
+                repository.vmi.create_from_tf_data(
+                    project,
+                    network,
+                    node_name,
+                    vlan_id,
+                    vpg_name)
+            else:
+                LOG.error(
+                    "Couldn't find VPG %s for VMI %s with physnet %s."
+                    " Skipping",
+                    vpg_name,
+                    vmi_name,
+                    physical_network
+                )
 
+            return
+
+        vpg_name = resources.vpg.make_name(node_name)
         vpg_uuid = utils.make_uuid(vpg_name)
         if tf_client.read_vpg(uuid=vpg_uuid) is None:
             LOG.warning(

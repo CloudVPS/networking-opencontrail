@@ -19,6 +19,7 @@ from vnc_api import vnc_api
 from networking_opencontrail.exceptions import InvalidResource
 from networking_opencontrail.resources.utils import destandardize_name
 from networking_opencontrail.resources.utils import first
+from networking_opencontrail.resources.utils import is_sriov_port
 from networking_opencontrail.resources.utils import make_uuid
 from networking_opencontrail.resources.utils import standardize_name
 from networking_opencontrail.resources.vmi import validate
@@ -110,7 +111,7 @@ def make_names_from_q_data(q_ports, q_networks):
 
             node_name = q_port['binding:host_id']
 
-            if q_port['binding:vif_type'] == 'hw_veb':
+            if is_sriov_port(q_port):
                 network_name = q_network['provider:physical_network']
                 vpg_name = make_name(node_name, network_name)
             else:

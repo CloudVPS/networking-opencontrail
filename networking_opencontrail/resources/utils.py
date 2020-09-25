@@ -23,9 +23,9 @@ ovs_compute = 'ovs-compute'
 baremetal = 'baremetal'
 
 
-def is_sriov_node(node):
-    """Determine if node uses sriov data ports."""
-    return node.node_type == sriov_compute
+def is_sriov_port(q_port):
+    """Show if port is SRiOV based"""
+    return q_port['binding:vif_type'] == 'hw_veb'
 
 
 def first(iterable, condition=lambda x: True, default=None):
