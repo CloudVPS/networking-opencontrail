@@ -1,7 +1,0 @@
-#!/usr/bin/env ansible-playbook
-
-- import_playbook: change_password.yml
-- import_playbook: setup_nodes.yml
-- hosts: contrail_controller
-  roles:
-    - synchronize_projects
