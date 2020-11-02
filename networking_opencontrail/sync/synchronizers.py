@@ -38,7 +38,7 @@ class NetworkSynchronizer(base.OneToOneResourceSynchronizer):
     LOG_RES_NAME = "Network"
 
     def _get_tf_resources(self):
-        return repository.tf_client.list_networks()
+        return repository.tf_client.list_networks(fields=['fq_name'])
 
     def _get_neutron_resources(self):
         return neutron_client.list_networks(self._context)
@@ -50,7 +50,7 @@ class NetworkSynchronizer(base.OneToOneResourceSynchronizer):
         repository.network.delete({"id": resource_id})
 
     def _ignore_non_ntf_resource(self, resource):
-        return (resource.get_fq_name()[1] == "default-project")
+        return resource['fq_name'][1] == "default-project"
 
     def _ignore_neutron_resource(self, resource):
         return "_snat_" in resource["name"]
@@ -79,7 +79,7 @@ class VPGSynchronizer(base.ResourceSynchronizer):
         q_ports = neutron_client.list_ports(self._context)
         vpg_names_from_q_data = \
             resources.vpg.make_names_from_q_data(q_ports, q_networks)
-        vpgs = repository.tf_client.list_vpgs()
+        vpgs = repository.tf_client.list_vpgs(fields=['fq_name'])
         vpg_names_from_tf_data = self._make_vpg_names_from_tf_data(vpgs)
         return vpg_names_from_q_data, vpg_names_from_tf_data
 
@@ -101,7 +101,9 @@ class VPGSynchronizer(base.ResourceSynchronizer):
 
     @staticmethod
     def _make_vpg_names_from_tf_data(vpgs):
-        return set(vpg.name for vpg in vpgs if tagger.belongs_to_ntf(vpg))
+        return set(
+            vpg['fq_name'][-1] for vpg in vpgs if tagger.belongs_to_ntf(vpg)
+        )
 
 
 class VMISynchronizer(base.ResourceSynchronizer):
@@ -126,8 +128,11 @@ class VMISynchronizer(base.ResourceSynchronizer):
         q_ports = neutron_client.list_ports(self._context)
         vmi_names_from_q_data = \
             resources.vmi.make_names_from_q_data(q_ports, q_networks)
-        vmis = [vmi for vmi in repository.tf_client.list_vmis()
-                if not vmi.get_logical_router_back_refs()]
+        vmi_fields = ['uuid', 'logical_router_back_refs']
+        vmis = [
+            vmi for vmi in repository.tf_client.list_vmis(fields=vmi_fields)
+            if not vmi.get('logical_router_back_refs')
+        ]
         vmi_names_from_tf_data = self._make_vmi_names_from_tf_data(vmis)
         return vmi_names_from_q_data, vmi_names_from_tf_data
 
@@ -241,7 +246,7 @@ class VMISynchronizer(base.ResourceSynchronizer):
 
     @staticmethod
     def _make_vmi_names_from_tf_data(vmis):
-        return set(vmi.name for vmi in vmis if tagger.belongs_to_ntf(vmi))
+        return set(vmi['fq_name'][-1] for vmi in vmis)
 
 
 class SubnetSynchronizer(base.OneToOneResourceSynchronizer):
@@ -318,7 +323,8 @@ class RouterInterfaceSynchronizer(base.OneToOneResourceSynchronizer):
     LOG_RES_NAME = "Logical Router Interface"
 
     def _get_tf_resources(self):
-        return repository.tf_client.list_vmis()
+        vmi_fields = ['uuid', 'logical_router_back_refs']
+        return repository.tf_client.list_vmis(fields=vmi_fields)
 
     def _get_neutron_resources(self):
         return neutron_client.list_router_interfaces(self._context)
@@ -333,8 +339,7 @@ class RouterInterfaceSynchronizer(base.OneToOneResourceSynchronizer):
         repository.router.remove_interface(router_id, resource_id)
 
     def _ignore_non_ntf_resource(self, resource):
-        return (not tagger.belongs_to_ntf(resource)
-                or not resource.get_logical_router_back_refs())
+        return not resource.get('logical_router_back_refs')
 
     def _ignore_neutron_resource(self, resource):
         router = neutron_client.get_router(

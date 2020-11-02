@@ -88,7 +88,11 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
         neutron_res_ids = set(
             [resource["id"] for resource in neutron_resources]
         )
-        tf_res_ids = set([resource.get_uuid() for resource in tf_resources])
+        try:
+            tf_res_ids = set(resource.get_uuid() for resource in tf_resources)
+        except AttributeError:
+            tf_res_ids = set(resource['uuid'] for resource in tf_resources)
+
         return neutron_res_ids, tf_res_ids
 
     def calculate_delete_diff(self):
@@ -104,13 +108,21 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
                                                         neutron_resources)
 
         res_ids_to_delete = tf_res_ids - neutron_res_ids
+        try:
+            to_delete = [
+                resource
+                for resource in tf_resources
+                if resource.get_uuid() in res_ids_to_delete
+                and not self._ignore_non_ntf_resource(resource)
+            ]
+        except AttributeError:
+            to_delete = [
+                resource
+                for resource in tf_resources
+                if resource['uuid'] in res_ids_to_delete
+                and not self._ignore_non_ntf_resource(resource)
+            ]
 
-        to_delete = [
-            resource
-            for resource in tf_resources
-            if resource.get_uuid() in res_ids_to_delete
-            and not self._ignore_non_ntf_resource(resource)
-        ]
         self._log_diff(neutron_resources, tf_resources, to_delete=to_delete)
 
         return to_delete
@@ -154,13 +166,18 @@ class OneToOneResourceSynchronizer(ResourceSynchronizer):
     def _delete_resources(self, to_delete):
         for resource in list(to_delete):
             try:
-                self._delete_resource(resource.get_uuid())
+                res_id = resource.get_uuid()
+            except AttributeError:
+                res_id = resource['uuid']
+
+            try:
+                self._delete_resource(res_id)
                 to_delete.remove(resource)
             except Exception:
                 LOG.exception(
                     "Delete %s: %s Failed",
                     self.LOG_RES_NAME,
-                    resource.get_uuid()
+                    res_id
                 )
 
     def _log_diff(

@@ -44,7 +44,10 @@ def identifier_tag():
 
 def is_tagged(resource, tag):
     """Check if tag is in resource"""
-    tag_refs = resource.get_tag_refs() or ()
+    try:
+        tag_refs = resource.get_tag_refs() or ()
+    except AttributeError:
+        tag_refs = resource.get('tag_refs', ())
     return tag in {ref['to'][-1] for ref in tag_refs}
 
 
@@ -67,7 +70,10 @@ def is_data_port(port, tag_name):
 
 def check_tags_on_resource(resource, tag_names):
     """Check if resource has any of tags from provided list."""
-    tag_refs = resource.get_tag_refs() or ()
+    try:
+        tag_refs = resource.get_tag_refs() or ()
+    except AttributeError:
+        tag_refs = resource.get('tag_refs', ())
     resource_tags = {ref['to'][-1] for ref in tag_refs}
 
     tags = set(
