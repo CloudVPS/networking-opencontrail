@@ -37,7 +37,7 @@ class TFClient(object):
             return
 
         config = {
-            "api_server_host": cfg.CONF.APISERVER.api_server_ip,
+            "api_server_host": cfg.CONF.APISERVER.api_server_ip.split(","),
             "api_server_port": cfg.CONF.APISERVER.api_server_port,
             "api_server_use_ssl": cfg.CONF.APISERVER.use_ssl,
             "apicertfile": cfg.CONF.APISERVER.certfile,
