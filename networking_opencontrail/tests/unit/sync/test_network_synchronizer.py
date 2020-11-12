@@ -13,7 +13,6 @@
 #    under the License.
 #
 import mock
-from vnc_api import vnc_api
 
 from networking_opencontrail.sync.synchronizers import NetworkSynchronizer
 from networking_opencontrail.tests import base
@@ -29,43 +28,44 @@ class NetworkSynchronizerTestCase(base.TestCase):
     @mock.patch("networking_opencontrail.sync.synchronizers.repository")
     def test_calculate_diff(self, repository, core_plugin):
         # Exists both in Neutron and TF config API.
-        n_network_1 = {
+        q_network_1 = {
             "id": "net-id-1",
             "name": "",
             "fq_name": ["", "", ""]
         }
         # Doesn't exist in TF config API - should be created.
-        n_network_2 = {
+        q_network_2 = {
             "id": "net-id-2",
             "name": "",
             "fq_name": ["", "", ""]
         }
         # Used for SNAT - should be ignored.
-        n_network_snat = {
+        q_network_snat = {
             "id": "net-id-snat",
             "name": "net_snat_",
             "fq_name": ["", "", "net_snat_"],
         }
-        project = vnc_api.Project(name="test-project")
 
-        # Represents n_network_1 in TF config API.
-        tf_network_1 = vnc_api.VirtualNetwork(name="net-1",
-                                              parent_obj=project)
-        tf_network_1.set_uuid("net-id-1")
-
+        # Represents q_network_1 in TF config API.
+        tf_network_1 = {
+            "fq_name": ["default-domain", "test-project", "net-1"],
+            "uuid": "net-id-1",
+        }
         # TF only - should be deleted.
-        tf_network_3 = vnc_api.VirtualNetwork(name="net-3",
-                                              parent_obj=project)
-        tf_network_3.set_uuid("net-id-3")
-
+        tf_network_3 = {
+            "fq_name": ["default-domain", "test-project", "net-3"],
+            "uuid": "net-id-3",
+        }
         # Has default-project as parent - should be ignored
-        tf_network_ignore = vnc_api.VirtualNetwork(name="net-4")
-        tf_network_ignore.set_uuid("net-id-4")
+        tf_network_ignore = {
+            "fq_name": ["default-domain", "default-project", "net-4"],
+            "uuid": "net-id-4",
+        }
 
         core_plugin.return_value.get_networks.return_value = [
-            n_network_1,
-            n_network_2,
-            n_network_snat,
+            q_network_1,
+            q_network_2,
+            q_network_snat,
         ]
         repository.tf_client.list_networks.return_value = [
             tf_network_1,
@@ -77,5 +77,5 @@ class NetworkSynchronizerTestCase(base.TestCase):
         to_create = synchronizer.calculate_create_diff()
         to_delete = synchronizer.calculate_delete_diff()
 
-        self.assertEqual([n_network_2], to_create)
+        self.assertEqual([q_network_2], to_create)
         self.assertEqual([tf_network_3], to_delete)

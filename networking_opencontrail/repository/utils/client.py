@@ -78,13 +78,20 @@ class TFClient(object):
         except vnc_api.NoIdError:
             return None
 
-    def list_networks(self, tagged_only=True):
+    def list_networks(self, tagged_only=True, fields=None):
         """Gets the list of Virtual Networks.
 
         By default it returns only Virtual Networks that were created
         by this client.
         """
-        objs = self.session.virtual_networks_list(detail=True)
+        if fields:
+            if tagged_only and 'tag_refs' not in fields:
+                fields.append('tag_refs')
+            objs = self.session.virtual_networks_list(fields=fields)
+            objs = objs['virtual-networks']
+        else:
+            objs = self.session.virtual_networks_list(detail=True)
+
         if tagged_only:
             return self._filter_tagged_resources(objs)
         return objs
@@ -124,15 +131,23 @@ class TFClient(object):
             LOG.debug('Could not delete Virtual Network '
                       '(uuid: %s, fq_name: %s) - not found', uuid, fq_name)
 
-    def list_vmis(self, tagged_only=True):
+    def list_vmis(self, tagged_only=True, fields=None):
         """Gets the list of Virtual Machine Interfaces.
 
         By default it returns only Virtual Machine Interfaces that
         were created by this client.
         """
-        objs = self.session.virtual_machine_interfaces_list(detail=True)
+        if fields:
+            if tagged_only and 'tag_refs' not in fields:
+                fields.append('tag_refs')
+            objs = self.session.virtual_machine_interfaces_list(fields=fields)
+            objs = objs['virtual-machine-interfaces']
+        else:
+            objs = self.session.virtual_machine_interfaces_list(detail=True)
+
         if tagged_only:
             return self._filter_tagged_resources(objs)
+
         return objs
 
     def read_vmi(self, uuid=None, fq_name=None):
@@ -172,13 +187,20 @@ class TFClient(object):
             LOG.debug('Could not delete Virtual Machine Interface '
                       '(uuid: %s, fq_name: %s) - not found', uuid, fq_name)
 
-    def list_vpgs(self, tagged_only=True):
+    def list_vpgs(self, tagged_only=True, fields=None):
         """Gets the list of Virtual Port Groups.
 
         By default it returns only Virtual Port Groups that were
         created by this client.
         """
-        objs = self.session.virtual_port_groups_list(detail=True)
+        if fields:
+            if tagged_only and 'tag_refs' not in fields:
+                fields.append('tag_refs')
+            objs = self.session.virtual_port_groups_list(fields=fields)
+            objs = objs['virtual-port-groups']
+        else:
+            objs = self.session.virtual_port_groups_list(detail=True)
+
         if tagged_only:
             return self._filter_tagged_resources(objs)
         return objs
