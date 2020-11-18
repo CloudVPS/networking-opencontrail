@@ -41,11 +41,14 @@ Manual configuration
       :language: ini
 
 #. Create a new file ``/etc/neutron/plugins/ml2/ml2_conf_opencontrail.ini``
-   and write an IP and a port of the Tungsten Fabric REST API to meet the example:
+   and write an IP and a port of the Tungsten Fabric REST API to meet the example
+   (you can also set custom period between sync runs, it should be longer than one
+   hour or it can block NTF API, you can use 's', 'm', and 'h' postfix for seconds,
+   minutes, and hours):
 
    .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
       :language: ini
-      :lines: 1-3
+      :lines: 1-4
 
 #. Make sure you include all config files in the Neutron server parameters::
 
@@ -86,7 +89,7 @@ Assume that the Kolla was deployed using this guide: `kolla_quickstart`_.
 
    .. literalinclude:: samples/ml2_conf_opencontrail.ini.sample
       :language: ini
-      :lines: 1-3
+      :lines: 1-4
 
 #. Edit ``/etc/kolla/neutron-server/config.json``:
 

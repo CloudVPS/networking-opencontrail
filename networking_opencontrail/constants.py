@@ -23,3 +23,6 @@ VNC_API_DEFAULT_INSECURE = False
 # NTF sync lock - this lock prevents synchronization and callbacks from running
 # simultaneously
 NTF_SYNC_LOCK_NAME = 'ntf_sync_lock'
+
+# Sync time period default
+SYNC_DEFAULT_TIME_PERIOD = '8h'

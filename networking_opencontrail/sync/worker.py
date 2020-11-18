@@ -18,6 +18,7 @@ from eventlet import greenthread
 
 from neutron_lib import context
 from neutron_lib import worker
+from oslo_config import cfg
 from oslo_log import log as logging
 
 from networking_opencontrail import repository
@@ -38,6 +39,8 @@ class TFSyncWorker(worker.BaseWorker):
             synchronizers.RouterSynchronizer(),
             synchronizers.RouterInterfaceSynchronizer(),
         ]
+        self._period = get_period()
+        LOG.info("Sync period set to {}s".format(self._period))
         self._thread = None
         self._running = False
         self.done = event.Event()
@@ -64,6 +67,9 @@ class TFSyncWorker(worker.BaseWorker):
 
     def sync_loop(self):
         while self._running:
+            if self._period < 3600:
+                LOG.warning("Sync time period is set to value less than 1 "
+                            "hour which can block NTF API")
             try:
                 repository.connect()
                 self._synchronize()
@@ -74,7 +80,7 @@ class TFSyncWorker(worker.BaseWorker):
             except Exception:
                 LOG.exception("Periodic Sync Failed")
 
-            greenthread.sleep(5)
+            greenthread.sleep(self._period)
 
         self.done.send()
 
@@ -87,3 +93,16 @@ class TFSyncWorker(worker.BaseWorker):
     @property
     def _context(self):
         return context.get_admin_context()
+
+
+def get_period():
+    period_str = cfg.CONF.APISERVER.sync_time_period
+    if period_str[-1] == 'h':
+        period = float(period_str[:-1]) * 60 * 60
+    elif period_str[-1] == 'm':
+        period = float(period_str[:-1]) * 60
+    elif period_str[-1] == 's':
+        period = float(period_str[:-1])
+    else:
+        period = float(period_str)
+    return period

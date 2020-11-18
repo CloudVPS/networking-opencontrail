@@ -54,6 +54,11 @@ vnc_opts = [
             'the management network'
         )
     ),
+    cfg.StrOpt(
+        'sync_time_period',
+        default=constants.SYNC_DEFAULT_TIME_PERIOD,
+        help='Time period of sync job'
+    ),
 ]
 """List of options to register in APISERVER section"""
 
