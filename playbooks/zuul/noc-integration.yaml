@@ -50,6 +50,14 @@
         dest: /usr/bin/python3
         state: link
 
+    - name: Install test-requirements
+      # pip ansible module is not able to locate test-requirements.txt.
+      become: yes
+      shell: "pip install -r test-requirements.txt"
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
+        executable: /bin/bash
+
     - name: Execute noc-integration tests
       shell: |
         export CONTRAIL_IP={{ hostvars['controller'].ansible_default_ipv4.address }}
