@@ -18,4 +18,4 @@ contrail-api-client>=2005
 # and should receive neutron-lib consumption patches as they are released
 # in neutron-lib. It also implies the project will stay current with TC
 # and infra initiatives ensuring consumption patches can land.
-ovsdbapp<1.0.0
+ovsdbapp
